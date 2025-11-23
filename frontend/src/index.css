@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+}
+
+/* Hide Emergent badge - very specific targeting to avoid affecting app elements */
+[class*="emergent-badge"],
+[id*="emergent-badge"],
+iframe[src*="emergent"],
+div[style*="position: fixed"][style*="bottom: 20px"][style*="right: 20px"],
+div[style*="position: fixed"][style*="bottom: 1rem"][style*="right: 1rem"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}

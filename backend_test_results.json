@@ -1,0 +1,76 @@
+{
+  "summary": {
+    "passed": 9,
+    "total": 11,
+    "success_rate": "81.8%"
+  },
+  "results": [
+    {
+      "test": "Root API Endpoint",
+      "success": true,
+      "details": "Status: 200, Response: {'message': 'AniChat.gg API'}",
+      "timestamp": "2025-11-04T09:54:11.301340"
+    },
+    {
+      "test": "Socket.IO Endpoint",
+      "success": true,
+      "details": "Status: 200, Socket.IO endpoint accessible",
+      "timestamp": "2025-11-04T09:54:11.341741"
+    },
+    {
+      "test": "CORS Configuration",
+      "success": false,
+      "details": "CORS Headers: {'Access-Control-Allow-Origin': None, 'Access-Control-Allow-Methods': None, 'Access-Control-Allow-Headers': None}",
+      "timestamp": "2025-11-04T09:54:11.379551"
+    },
+    {
+      "test": "Auth Me (No Token)",
+      "success": true,
+      "details": "Status: 401 (Expected 401)",
+      "timestamp": "2025-11-04T09:54:11.424906"
+    },
+    {
+      "test": "Session Creation (Invalid)",
+      "success": false,
+      "details": "Status: 500 (Expected 401)",
+      "timestamp": "2025-11-04T09:54:11.533024"
+    },
+    {
+      "test": "Logout (No Auth)",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2025-11-04T09:54:11.589249"
+    },
+    {
+      "test": "Anime Endpoint (No Auth)",
+      "success": true,
+      "details": "Status: 401 (Expected 401)",
+      "timestamp": "2025-11-04T09:54:11.629864"
+    },
+    {
+      "test": "Anime Endpoint Structure",
+      "success": true,
+      "details": "Status: 401, Endpoint accessible",
+      "timestamp": "2025-11-04T09:54:11.669674"
+    },
+    {
+      "test": "Profile Update (No Auth)",
+      "success": true,
+      "details": "Status: 401 (Expected 401)",
+      "timestamp": "2025-11-04T09:54:11.706816"
+    },
+    {
+      "test": "Friends Endpoint (No Auth)",
+      "success": true,
+      "details": "Status: 401 (Expected 401)",
+      "timestamp": "2025-11-04T09:54:11.744114"
+    },
+    {
+      "test": "Friend Requests (No Auth)",
+      "success": true,
+      "details": "Status: 401 (Expected 401)",
+      "timestamp": "2025-11-04T09:54:11.782332"
+    }
+  ],
+  "timestamp": "2025-11-04T09:54:11.783198"
+}

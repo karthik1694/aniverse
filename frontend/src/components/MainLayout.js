@@ -1,0 +1,502 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import { Badge } from './ui/badge';
+import { axiosInstance } from '../App';
+import { toast } from 'sonner';
+import { MessageCircle, Users, Plus, Settings, LogOut, Crown } from 'lucide-react';
+import UserArc from './UserArc';
+import PremiumUpgrade from './PremiumUpgrade';
+import ArcProgressionNotification from './ArcProgressionNotification';
+import io from 'socket.io-client';
+
+export default function MainLayout({ user, setUser, children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('chat');
+  const [showPremiumUpgrade, setShowPremiumUpgrade] = useState(false);
+  const [friends, setFriends] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [directMessages, setDirectMessages] = useState([]);
+  const [socket, setSocket] = useState(null);
+
+
+  useEffect(() => {
+    // Initialize socket connection for arc progression notifications and real-time updates
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+    const newSocket = io(BACKEND_URL, {
+      path: '/api/socket.io',
+      withCredentials: true,
+      transports: ['websocket', 'polling']
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to socket for arc progression and real-time updates');
+      // Register this user for global notifications
+      if (user) {
+        newSocket.emit('register_for_notifications', {
+          user_id: user.id,
+          user_data: user
+        });
+      }
+    });
+
+    newSocket.on('direct_message_received', (messageData) => {
+      console.log('MainLayout received message:', messageData);
+      // Update unread counts when a new message is received
+      if (activeTab === 'chat') {
+        setTimeout(() => {
+          loadDirectMessages();
+        }, 100); // Small delay to ensure message is saved to DB
+      }
+    });
+
+    // Listen for new message notifications (when user is not in the chat room)
+    newSocket.on('new_message_notification', (notificationData) => {
+      console.log('MainLayout received notification:', notificationData);
+      
+      // Show a toast notification
+      toast.info(`New message from ${notificationData.from_user_name}: ${notificationData.message_preview}`, {
+        duration: 4000,
+        action: {
+          label: 'View',
+          onClick: () => {
+            // Navigate to the chat with this user
+            setActiveTab('chat');
+            // The chat list will be updated automatically
+          }
+        }
+      });
+      
+      // Update unread counts immediately
+      if (activeTab === 'chat') {
+        setTimeout(() => {
+          loadDirectMessages();
+        }, 100); // Small delay to ensure message is saved to DB
+      }
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from socket');
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []); // Remove activeTab dependency to prevent reconnections
+
+  // Separate useEffect to handle tab changes
+  useEffect(() => {
+    if (activeTab === 'friends') {
+      loadFriends();
+      loadFriendRequests();
+    } else if (activeTab === 'chat') {
+      loadDirectMessages();
+    }
+  }, [activeTab]);
+
+  const loadFriends = async () => {
+    try {
+      const response = await axiosInstance.get('/friends');
+      setFriends(response.data);
+    } catch (error) {
+      console.error('Error loading friends:', error);
+    }
+  };
+
+  const loadFriendRequests = async () => {
+    try {
+      const response = await axiosInstance.get('/friend-requests');
+      setFriendRequests(response.data);
+    } catch (error) {
+      console.error('Error loading friend requests:', error);
+    }
+  };
+
+  const loadDirectMessages = async () => {
+    try {
+      console.log('Loading direct messages...');
+      
+      // Get friends and their latest messages
+      const friendsResponse = await axiosInstance.get('/friends');
+      const friendsList = friendsResponse.data;
+      console.log('Friends list:', friendsList);
+      
+      // Get unread counts for all friends
+      const unreadCountsResponse = await axiosInstance.get('/unread-counts');
+      const unreadCounts = unreadCountsResponse.data;
+      console.log('Unread counts:', unreadCounts);
+      
+      const conversations = [];
+      for (const friend of friendsList) {
+        try {
+          const messagesResponse = await axiosInstance.get(`/direct-messages/${friend.id}`);
+          const messagesData = messagesResponse.data;
+          const messages = messagesData.messages || messagesData;
+          
+          if (Array.isArray(messages) && messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            const unreadCount = unreadCounts[friend.id] || 0;
+            console.log(`Friend ${friend.name}: ${unreadCount} unread messages`);
+            
+            conversations.push({
+              friend,
+              lastMessage,
+              unreadCount
+            });
+          }
+        } catch (error) {
+          console.error(`Error loading messages for friend ${friend.id}:`, error);
+        }
+      }
+      
+      // Sort by last message timestamp
+      conversations.sort((a, b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
+      console.log('Final conversations:', conversations);
+      setDirectMessages(conversations);
+    } catch (error) {
+      console.error('Error loading direct messages:', error);
+    }
+  };
+
+  const handleFriendClick = async (friend) => {
+    // Prevent users from trying to chat with themselves
+    if (friend.id === user.id) {
+      toast.error('You cannot chat with yourself');
+      return;
+    }
+    
+    // Mark messages as read when opening chat
+    try {
+      await axiosInstance.post(`/mark-messages-read/${friend.id}`);
+      // Refresh direct messages to update unread counts
+      if (activeTab === 'chat') {
+        loadDirectMessages();
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+    
+    // Navigate to direct chat with friend
+    navigate(`/direct-chat/${friend.id}`);
+  };
+
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      await axiosInstance.post(`/friend-requests/${requestId}/accept`);
+      toast.success('Friend request accepted!');
+      loadFriends();
+      loadFriendRequests();
+    } catch (error) {
+      toast.error('Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+    try {
+      await axiosInstance.post(`/friend-requests/${requestId}/reject`);
+      toast.success('Friend request rejected');
+      loadFriendRequests();
+    } catch (error) {
+      toast.error('Failed to reject request');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axiosInstance.post('/auth/logout');
+      setUser(null);
+      navigate('/');
+    } catch (error) {
+      toast.error('Logout failed');
+    }
+  };
+
+  const isActive = (path) => location.pathname === path;
+
+  return (
+    <div className="h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] text-white flex overflow-hidden">
+      {/* Fixed Sidebar */}
+      <div className="w-64 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-r border-gray-800/50 flex flex-col flex-shrink-0">
+        {/* Logo */}
+        <div className="p-4 border-b border-gray-800/50">
+          <h1 className="text-xl font-bold text-cyan-400">AniChat.gg</h1>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="p-3 border-b border-gray-800/50">
+          <div className="flex gap-2">
+            <Button
+              variant={activeTab === 'chat' ? 'default' : 'ghost'}
+              className={`flex-1 ${
+                activeTab === 'chat'
+                  ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+              onClick={() => setActiveTab('chat')}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Chat
+            </Button>
+            <Button
+              variant={activeTab === 'friends' ? 'default' : 'ghost'}
+              className={`flex-1 ${
+                activeTab === 'friends'
+                  ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+              onClick={() => setActiveTab('friends')}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Friends
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Navigation */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {/* New Chat Button */}
+          <Button
+            className="w-full justify-start bg-cyan-500 hover:bg-cyan-600 text-white"
+            onClick={() => navigate('/chat')}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Chat
+          </Button>
+
+
+
+          {/* Dynamic Content Section */}
+          <div className="pt-4">
+            {activeTab === 'friends' ? (
+              <div>
+                {/* Friend Requests */}
+                {friendRequests.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                      Friend Requests ({friendRequests.length})
+                    </h3>
+                    <div className="space-y-2 px-3">
+                      {friendRequests.map(({ request, from_user }) => (
+                        <div key={request.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={from_user.picture} />
+                              <AvatarFallback className="text-xs">{from_user.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold text-white text-xs">{from_user.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              onClick={() => handleAcceptRequest(request.id)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white h-6 text-xs px-2"
+                            >
+                              ✓
+                            </Button>
+                            <Button
+                              onClick={() => handleRejectRequest(request.id)}
+                              size="sm"
+                              className="bg-red-600 hover:bg-red-700 text-white h-6 text-xs px-2"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Friends List */}
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                    Friends ({friends.length})
+                  </h3>
+                  {friends.length > 0 ? (
+                    <div className="space-y-2 px-3">
+                      {friends.map((friend) => (
+                        <div
+                          key={friend.id}
+                          className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+                          onClick={() => handleFriendClick(friend)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={friend.picture} />
+                              <AvatarFallback className="text-xs">{friend.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-white truncate text-xs">{friend.name}</p>
+                              {friend.favorite_anime.length > 0 && (
+                                <p className="text-xs text-gray-400 truncate">
+                                  Likes: {friend.favorite_anime.slice(0, 2).join(', ')}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              💬
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center px-3">
+                      <Users className="h-8 w-8 mb-2 text-gray-600" />
+                      <p className="text-xs text-gray-400">
+                        No friends yet. Start matching to make connections!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                  Direct Messages
+                </h3>
+                {directMessages.length > 0 ? (
+                  <div className="space-y-2 px-3">
+                    {directMessages.map((conversation) => (
+                      <div
+                        key={conversation.friend.id}
+                        className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+                        onClick={() => handleFriendClick(conversation.friend)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={conversation.friend.picture} />
+                            <AvatarFallback className="text-xs">{conversation.friend.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white truncate text-xs">{conversation.friend.name}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {conversation.lastMessage.message.length > 30
+                                ? conversation.lastMessage.message.substring(0, 30) + '...'
+                                : conversation.lastMessage.message
+                              }
+                            </p>
+                          </div>
+                          {conversation.unreadCount > 0 && (
+                            <div className="bg-cyan-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                              {conversation.unreadCount}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center px-3">
+                    <div className="text-4xl mb-2">📭</div>
+                    <p className="text-xs text-gray-400">
+                      No direct messages yet. Click on friends to start chatting!
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Premium Section */}
+        <div className="p-3 border-t border-gray-800/50">
+          {user.premium ? (
+            <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="h-5 w-5 text-yellow-400" />
+                <h3 className="font-bold text-yellow-400 text-sm">Premium Active</h3>
+              </div>
+              <p className="text-xs text-gray-300 mb-3">
+                You're enjoying all premium features! 🎉
+              </p>
+              <div className="text-xs text-yellow-300">
+                ✨ Unlimited matches<br/>
+                ✨ Priority matching<br/>
+                ✨ Extended video chat
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="h-5 w-5 text-yellow-400" />
+                <h3 className="font-bold text-yellow-400 text-sm">Go Premium</h3>
+              </div>
+              <p className="text-xs text-gray-300 mb-3">
+                Unlock exclusive features and support the platform
+              </p>
+              <Button
+                onClick={() => setShowPremiumUpgrade(true)}
+                className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold text-xs"
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* User Arc Section */}
+        <div className="p-3 border-t border-gray-800/50">
+          <UserArc compact={true} />
+        </div>
+
+        {/* User Profile Section */}
+        <div className="p-3 border-t border-gray-800/50 bg-[#0f1419]/80 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border-2 border-white/10">
+              <AvatarImage src={user.picture} />
+              <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600">
+                {user.name[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-white text-sm truncate">{user.name}</p>
+              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-white/5"
+                onClick={() => navigate('/profile-setup')}
+              >
+                <Settings className="h-4 w-4 text-gray-400" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-white/5"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 text-gray-400" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {children}
+      </div>
+
+      {/* Premium Upgrade Modal */}
+      {showPremiumUpgrade && (
+        <PremiumUpgrade
+          user={user}
+          setUser={setUser}
+          onClose={() => setShowPremiumUpgrade(false)}
+        />
+      )}
+
+      {/* Arc Progression Notification */}
+      <ArcProgressionNotification socket={socket} />
+    </div>
+  );
+}

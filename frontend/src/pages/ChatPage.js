@@ -1,0 +1,600 @@
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
+import { axiosInstance } from '../App';
+import { toast } from 'sonner';
+import { io } from 'socket.io-client';
+import { Send, UserPlus, X, ArrowLeft, Loader2 } from 'lucide-react';
+import ArcProgressionNotification from '../components/ArcProgressionNotification';
+import MatchingScreen from '../components/MatchingScreen';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+export default function ChatPage({ user }) {
+  const navigate = useNavigate();
+  const [socket, setSocket] = useState(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [matching, setMatching] = useState(false);
+  const [matched, setMatched] = useState(false);
+  const [partner, setPartner] = useState(null);
+  const [compatibility, setCompatibility] = useState(0);
+  const [sharedUniverse, setSharedUniverse] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messageInput, setMessageInput] = useState('');
+  const [matchingStats, setMatchingStats] = useState({ totalUsers: 0, activeMatchers: 0 });
+  const [skipCount, setSkipCount] = useState(0);
+  const [showSkippedNotification, setShowSkippedNotification] = useState(false);
+
+  // Dynamic usernames and avatars
+  const currentUser = {
+    name: user?.name || "You",
+    avatar: user?.picture ? "👤" : "😊",
+    color: "#7dd3fc" // Light blue for current user
+  };
+
+  const partnerUser = {
+    name: partner?.name || "Partner",
+    avatar: partner?.picture ? "👤" : "🙂",
+    color: "#22d3ee" // Cyan for partner
+  };
+
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    console.log('Connecting to Socket.IO at:', BACKEND_URL);
+    const newSocket = io(BACKEND_URL, {
+      path: '/api/socket.io',
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      timeout: 10000,
+      autoConnect: true,
+      withCredentials: true
+    });
+
+    // Set socket immediately so it's available when connected
+    setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      console.log('✓ Connected to server, socket ID:', newSocket.id);
+      setSocketConnected(true);
+      toast.success('Connected to server');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('✗ Connection error:', error.message);
+      setSocketConnected(false);
+      toast.error(`Connection failed: ${error.message}`);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('Disconnected from server. Reason:', reason);
+      setSocketConnected(false);
+      if (reason === 'io server disconnect') {
+        // Server disconnected, reconnect manually
+        newSocket.connect();
+      }
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('Socket error:', error);
+      toast.error('Socket error occurred');
+    });
+
+    newSocket.on('searching', () => {
+      console.log('✓ Received "searching" event from server');
+      setMatching(true);
+      toast.info('Added to matching queue');
+    });
+
+    newSocket.on('match_found', (data) => {
+      console.log('Match found:', data);
+      setPartner(data.partner);
+      setCompatibility(data.compatibility);
+      setSharedUniverse(data.shared_universe);
+      setMatched(true);
+      setMatching(false);
+      toast.success(`Matched with ${data.partner.name}!`);
+    });
+
+    newSocket.on('receive_message', (data) => {
+      setMessages(prev => [...prev, {
+        ...data,
+        type: 'received',
+        timestamp: data.timestamp || new Date().toISOString()
+      }]);
+    });
+
+    newSocket.on('message_sent', (data) => {
+      setMessages(prev => [...prev, {
+        ...data,
+        type: 'sent',
+        timestamp: data.timestamp || new Date().toISOString()
+      }]);
+    });
+
+    newSocket.on('partner_disconnected', () => {
+      toast.error('Partner disconnected');
+      handleLeaveChat();
+    });
+
+    newSocket.on('partner_left', () => {
+      setShowSkippedNotification(true);
+      handleLeaveChat();
+    });
+
+    newSocket.on('partner_skipped', () => {
+      console.log('Partner skipped, continuing search...');
+      setSkipCount(prev => prev + 1);
+      toast.info('Partner skipped - finding another match...');
+      setMatched(false);
+      setPartner(null);
+      setMessages([]);
+      // Continue matching automatically
+      setMatching(true);
+    });
+
+    newSocket.on('you_were_skipped', () => {
+      console.log('You were skipped, continuing search...');
+      setSkipCount(prev => prev + 1);
+      toast.info('Searching for another match...');
+      setMatched(false);
+      setPartner(null);
+      setMessages([]);
+      // Continue matching automatically
+      setMatching(true);
+    });
+
+    newSocket.on('matching_stats', (stats) => {
+      console.log('Received matching stats:', stats);
+      setMatchingStats(stats);
+    });
+
+    newSocket.on('search_timeout', () => {
+      console.log('Search timeout, retrying...');
+      toast.warning('Taking longer than usual - expanding search...');
+      // Don't stop matching, just show the message
+    });
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleStartMatching = () => {
+    console.log('Starting matching...', { 
+      socket: !!socket, 
+      socketConnected, 
+      socket_id: socket?.id,
+      user_id: user.id,
+      user_name: user.name
+    });
+    
+    if (!socket) {
+      toast.error('Socket not initialized. Please refresh the page.');
+      return;
+    }
+
+    if (!socketConnected) {
+      toast.error('Not connected to server. Connecting...');
+      socket.connect();
+      setTimeout(() => {
+        if (socket.connected) {
+          handleStartMatching();
+        }
+      }, 2000);
+      return;
+    }
+
+    console.log('Emitting join_matching event with data:', {
+      user_id: user.id,
+      user_name: user.name
+    });
+    
+    socket.emit('join_matching', {
+      user_id: user.id,
+      user_data: user
+    });
+    
+    toast.info('Searching for a match...');
+    setMatching(true);
+    setSkipCount(0); // Reset skip count when starting new search
+  };
+
+  const handleCancelMatching = () => {
+    console.log('Canceling matching...');
+    if (socket && socket.connected) {
+      socket.emit('cancel_matching');
+    }
+    setMatching(false);
+    setMatched(false);
+    setPartner(null);
+    setMessages([]);
+    toast.info('Search canceled');
+  };
+
+  const handleSkipPartner = () => {
+    console.log('Skipping current partner...');
+    if (socket && socket.connected) {
+      socket.emit('skip_partner');
+    }
+    // Reset chat state and start searching again
+    setMatched(false);
+    setPartner(null);
+    setMessages([]);
+    setCompatibility(0);
+    setSharedUniverse(null);
+    setMatching(true); // Continue searching
+    toast.info('Skipped - finding another match...');
+  };
+
+  const handleSendMessage = () => {
+    if (messageInput.trim() && socket) {
+      socket.emit('send_message', { message: messageInput });
+      setMessageInput('');
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!partner) return;
+    
+    try {
+      await axiosInstance.post(`/friend-requests/${partner.id}`);
+      toast.success('Friend request sent!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send friend request');
+    }
+  };
+
+  const handleLeaveChat = () => {
+    try {
+      if (socket && socket.connected) {
+        socket.emit('leave_chat');
+      }
+      // Show notification when user leaves
+      setShowSkippedNotification(true);
+      // Reset chat state
+      setMatched(false);
+      setPartner(null);
+      setMessages([]);
+    } catch (error) {
+      console.error('Error leaving chat:', error);
+    } finally {
+      // Don't navigate immediately, let user see the notification
+      // navigate('/chat');
+    }
+  };
+
+  const handleBackToMatching = () => {
+    setShowSkippedNotification(false);
+    setMatched(false);
+    setPartner(null);
+    setMessages([]);
+    // Optionally start matching again automatically
+    // handleStartMatching();
+  };
+
+  if (!matched) {
+    return (
+      <MatchingScreen
+        matching={matching}
+        socketConnected={socketConnected}
+        onStartMatching={handleStartMatching}
+        onCancel={handleCancelMatching}
+        onBack={() => navigate('/dashboard')}
+        matchingStats={matchingStats}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] relative">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Floating Particles */}
+          <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400/30 rounded-full animate-particle-float"></div>
+          <div className="absolute top-40 right-20 w-1 h-1 bg-purple-400/40 rounded-full animate-particle-float" style={{animationDelay: '1s'}}></div>
+          <div className="absolute top-60 left-1/4 w-1.5 h-1.5 bg-cyan-400/30 rounded-full animate-particle-float" style={{animationDelay: '2s'}}></div>
+          <div className="absolute bottom-40 right-1/3 w-2 h-2 bg-pink-400/20 rounded-full animate-particle-float" style={{animationDelay: '3s'}}></div>
+          <div className="absolute bottom-60 left-1/2 w-1 h-1 bg-blue-300/40 rounded-full animate-particle-float" style={{animationDelay: '4s'}}></div>
+          <div className="absolute top-1/3 right-10 w-1.5 h-1.5 bg-purple-300/30 rounded-full animate-particle-float" style={{animationDelay: '0.5s'}}></div>
+          <div className="absolute top-80 left-1/3 w-1 h-1 bg-cyan-300/35 rounded-full animate-particle-float" style={{animationDelay: '2.5s'}}></div>
+          <div className="absolute bottom-20 left-20 w-1.5 h-1.5 bg-blue-400/25 rounded-full animate-particle-float" style={{animationDelay: '1.8s'}}></div>
+          
+          {/* Animated Flowing Lines */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="lineGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.1"/>
+                <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.2"/>
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.1"/>
+              </linearGradient>
+              <linearGradient id="lineGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ec4899" stopOpacity="0.1"/>
+                <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.15"/>
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.1"/>
+              </linearGradient>
+            </defs>
+            
+            {/* Flowing Curve 1 - Main curve */}
+            <path
+              d="M-100,400 Q200,200 400,350 T800,300 Q1000,250 1300,400"
+              stroke="url(#lineGradient1)"
+              strokeWidth="2"
+              fill="none"
+              className="animate-pulse"
+              strokeDasharray="10 5"
+            />
+            
+            {/* Flowing Curve 2 - Bottom curve */}
+            <path
+              d="M-50,600 Q300,450 500,550 T900,500 Q1100,450 1350,600"
+              stroke="url(#lineGradient2)"
+              strokeWidth="1.5"
+              fill="none"
+              className="animate-pulse"
+              style={{animationDelay: '1.5s'}}
+              strokeDasharray="8 4"
+            />
+            
+            {/* Flowing Curve 3 - Top curve */}
+            <path
+              d="M200,100 Q400,50 600,150 T1000,100 Q1200,80 1400,200"
+              stroke="url(#lineGradient1)"
+              strokeWidth="1"
+              fill="none"
+              className="animate-pulse"
+              style={{animationDelay: '3s'}}
+              strokeDasharray="6 3"
+            />
+            
+            {/* Additional flowing curves for more depth */}
+            <path
+              d="M-200,300 Q100,150 300,250 T700,200 Q900,180 1200,300"
+              stroke="url(#lineGradient2)"
+              strokeWidth="1"
+              fill="none"
+              className="animate-pulse"
+              style={{animationDelay: '4s'}}
+              strokeDasharray="4 6"
+            />
+          </svg>
+          
+          {/* Gradient Overlays */}
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-radial from-blue-500/10 via-transparent to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-radial from-purple-500/10 via-transparent to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-cyan-500/5 via-transparent to-transparent rounded-full blur-3xl"></div>
+        </div>
+        
+        {/* AniChat Header */}
+        <div className="flex-shrink-0 bg-[#212d3d]/80 backdrop-blur-sm border-b border-gray-800/50 px-4 py-3 relative z-10">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleLeaveChat}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white p-2"
+                data-testid="leave-chat-btn"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-white font-medium">
+                # anime-chat
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSendFriendRequest}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white"
+                data-testid="send-friend-request-btn"
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={handleSkipPartner}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white"
+                data-testid="skip-partner-btn"
+              >
+                Skip
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-hidden relative z-10">
+          {/* AniChat Chat Interface */}
+          <div className="bg-transparent h-full flex flex-col">
+            {/* Skipped Chat Notification Banner */}
+            {showSkippedNotification && (
+              <div className="bg-red-500/20 backdrop-blur-sm px-4 py-3 border-b border-red-500/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-400">⚠️</span>
+                    <span className="text-white font-medium">You have skipped this chat.</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={() => {
+                        // Handle report functionality
+                        console.log('Report button clicked');
+                        // You can add report logic here
+                      }}
+                      className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 h-auto rounded"
+                    >
+                      Report
+                    </Button>
+                    <Button
+                      onClick={handleBackToMatching}
+                      className="bg-cyan-500 hover:bg-cyan-600 text-white text-xs px-3 py-1 h-auto rounded"
+                    >
+                      Back to Matching
+                    </Button>
+                    <Button
+                      onClick={() => setShowSkippedNotification(false)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-400 hover:text-white p-1"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Match Notification Banner */}
+            <div className="bg-[#212d3d]/80 backdrop-blur-sm px-4 py-3 border-b border-gray-800/50">
+              {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0) ? (
+                <>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-orange-400">✨</span>
+                    <span className="text-white font-medium">You both like</span>
+                    <span className="text-purple-400 font-bold">
+                      {sharedUniverse.shared_anime?.length > 0
+                        ? sharedUniverse.shared_anime[0]
+                        : sharedUniverse.shared_genres?.[0] || 'anime'
+                      }
+                    </span>
+                  </div>
+                  <div className="text-gray-300 text-sm">
+                    You are now chatting with <span className="text-purple-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
+                  </div>
+                </>
+              ) : (
+                <div className="text-gray-300 text-sm">
+                  You are now chatting with <span className="text-purple-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
+                </div>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-gray-400">
+                    <p className="text-lg mb-2">👋 Start the conversation!</p>
+                    <p className="text-sm">
+                      {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0) ? (
+                        `You both like ${
+                          sharedUniverse.shared_anime?.length > 0
+                            ? sharedUniverse.shared_anime[0]
+                            : sharedUniverse.shared_genres?.[0] || 'anime'
+                        } - that's a great conversation starter!`
+                      ) : (
+                        "You both love anime - that's a great conversation starter!"
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                messages.map((msg, index) => {
+                  const isCurrentUser = msg.type === 'sent';
+                  const displayUser = isCurrentUser ? currentUser : partnerUser;
+                  const timestamp = new Date(msg.timestamp).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  });
+                  
+                  return (
+                    <div key={index} className="flex items-start gap-3 px-2 py-1 hover:bg-[#212d3d]/60 rounded group">
+                      {/* Avatar */}
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-1"
+                        style={{ backgroundColor: displayUser.color }}
+                      >
+                        {displayUser.avatar}
+                      </div>
+                      
+                      {/* Message Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Username and Timestamp */}
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="font-medium text-white text-sm">
+                            {displayUser.name}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {timestamp}
+                          </span>
+                        </div>
+                        
+                        {/* Message Text */}
+                        <div className="text-gray-200 text-sm leading-relaxed">
+                          {msg.is_spoiler && (
+                            <Badge className="bg-red-500/20 text-red-300 mb-2 text-xs">⚠️ Potential Spoiler</Badge>
+                          )}
+                          <p className={msg.is_spoiler ? 'blur-sm hover:blur-none transition-all cursor-pointer' : ''}>
+                            {msg.message}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="px-4 pb-4">
+              <div className="relative">
+                {/* ESC and SKIP buttons */}
+                <div className="absolute left-2 top-2 flex gap-2 z-10">
+                  <Button
+                    onClick={handleLeaveChat}
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white text-xs px-3 py-1 h-auto rounded"
+                    size="sm"
+                  >
+                    ESC
+                  </Button>
+                  <Button
+                    onClick={handleSkipPartner}
+                    className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 h-auto rounded"
+                    size="sm"
+                  >
+                    SKIP
+                  </Button>
+                </div>
+                
+                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-3 px-4 py-3 pl-32">
+                  <div className="flex-1">
+                    <Input
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      placeholder="Send a message"
+                      className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto"
+                      data-testid="message-input"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-gray-400 text-sm cursor-pointer hover:text-white">GIF</div>
+                    <div className="text-gray-400 text-sm cursor-pointer hover:text-white">😊</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Arc Progression Notification */}
+      <ArcProgressionNotification socket={socket} />
+    </>
+  );
+}
