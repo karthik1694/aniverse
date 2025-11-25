@@ -28,25 +28,19 @@ load_dotenv(ROOT_DIR / '.env')
 import certifi
 mongo_url = os.environ['MONGO_URL']
 
-# Enhanced SSL configuration for cloud deployment
-ssl_context = ssl.create_default_context(cafile=certifi.where())
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_REQUIRED
-
+# Enhanced SSL configuration for cloud deployment using modern PyMongo parameters
 client = AsyncIOMotorClient(
     mongo_url,
     tlsCAFile=certifi.where(),
-    ssl=True,
-    ssl_cert_reqs=ssl.CERT_REQUIRED,
-    ssl_match_hostname=False,
-    ssl_ca_certs=certifi.where(),
-    retryWrites=True,
-    w='majority',
+    tlsAllowInvalidCertificates=False,
+    tlsAllowInvalidHostnames=False,
     serverSelectionTimeoutMS=30000,
     connectTimeoutMS=30000,
     socketTimeoutMS=30000,
     maxPoolSize=10,
-    minPoolSize=1
+    minPoolSize=1,
+    retryWrites=True,
+    w='majority'
 )
 db = client[os.environ['DB_NAME']]
 
