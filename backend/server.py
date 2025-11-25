@@ -27,7 +27,27 @@ load_dotenv(ROOT_DIR / '.env')
 # MongoDB connection with SSL certificate configuration
 import certifi
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url, tlsCAFile=certifi.where())
+
+# Enhanced SSL configuration for cloud deployment
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+client = AsyncIOMotorClient(
+    mongo_url,
+    tlsCAFile=certifi.where(),
+    ssl=True,
+    ssl_cert_reqs=ssl.CERT_REQUIRED,
+    ssl_match_hostname=False,
+    ssl_ca_certs=certifi.where(),
+    retryWrites=True,
+    w='majority',
+    serverSelectionTimeoutMS=30000,
+    connectTimeoutMS=30000,
+    socketTimeoutMS=30000,
+    maxPoolSize=10,
+    minPoolSize=1
+)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
@@ -422,6 +442,26 @@ def calculate_shared_universe(user1: User, user2: User) -> Dict:
 @api_router.get("/")
 async def root():
     return {"message": "AniChat.gg API"}
+
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for deployment monitoring"""
+    try:
+        # Test database connection
+        await db.admin.command('ping')
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail={
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
 
 @api_router.post("/auth/session")
 async def create_session(response: Response, session_id: str):
