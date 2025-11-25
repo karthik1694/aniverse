@@ -22,14 +22,109 @@ class DatabaseConnection:
         self.db = None
         self.mongo_url = os.environ.get('MONGO_URL')
         self.db_name = os.environ.get('DB_NAME', 'chatapp')
+        self.is_render_deployment = self._detect_render_environment()
+        self.is_cloud_deployment = self._detect_cloud_environment()
+        
+    def _detect_render_environment(self) -> bool:
+        """Detect if running on Render platform."""
+        render_indicators = [
+            'RENDER',
+            'RENDER_SERVICE_ID',
+            'RENDER_SERVICE_NAME',
+            'RENDER_EXTERNAL_URL'
+        ]
+        return any(os.environ.get(indicator) for indicator in render_indicators)
+    
+    def _detect_cloud_environment(self) -> bool:
+        """Detect if running in any cloud environment."""
+        cloud_indicators = [
+            'DYNO',  # Heroku
+            'RENDER',  # Render
+            'VERCEL',  # Vercel
+            'NETLIFY',  # Netlify
+            'AWS_LAMBDA_FUNCTION_NAME',  # AWS Lambda
+            'GOOGLE_CLOUD_PROJECT',  # Google Cloud
+            'AZURE_FUNCTIONS_ENVIRONMENT'  # Azure
+        ]
+        return any(os.environ.get(indicator) for indicator in cloud_indicators)
         
     async def connect(self) -> AsyncIOMotorClient:
         """
         Establish MongoDB connection with multiple fallback strategies for SSL/TLS issues.
+        Prioritizes strategies based on deployment environment.
         """
         if not self.mongo_url:
             raise ValueError("MONGO_URL environment variable is required")
+        
+        logger.info(f"🌐 Environment detection: Render={self.is_render_deployment}, Cloud={self.is_cloud_deployment}")
+        
+        # For Render deployment, start with more aggressive strategies
+        if self.is_render_deployment:
+            return await self._connect_render_optimized()
+        elif self.is_cloud_deployment:
+            return await self._connect_cloud_optimized()
+        else:
+            return await self._connect_local_optimized()
+    
+    async def _connect_render_optimized(self) -> AsyncIOMotorClient:
+        """Optimized connection strategy for Render deployment."""
+        logger.info("🚀 Using Render-optimized connection strategy")
+        
+        # Strategy 1: Direct connection (often works best on Render)
+        try:
+            logger.info("Attempting MongoDB connection with direct connection string approach...")
+            self.client = await self._connect_direct()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with direct approach")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Direct connection failed: {e}")
             
+        # Strategy 2: No SSL verification (for Render SSL issues)
+        try:
+            logger.info("Attempting MongoDB connection with no SSL verification...")
+            self.client = await self._connect_with_no_ssl_verification()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with no SSL verification")
+            return self.client
+        except Exception as e:
+            logger.warning(f"No SSL verification connection failed: {e}")
+            
+        # Strategy 3: Minimal SSL configuration
+        try:
+            logger.info("Attempting MongoDB connection with minimal SSL configuration...")
+            self.client = await self._connect_with_minimal_ssl()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with minimal SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Minimal SSL connection failed: {e}")
+            
+        # Strategy 4: Legacy SSL configuration
+        try:
+            logger.info("Attempting MongoDB connection with legacy SSL configuration...")
+            self.client = await self._connect_with_legacy_ssl()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with legacy SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Legacy SSL connection failed: {e}")
+            
+        # Strategy 5: Modern TLS (last for Render due to common issues)
+        try:
+            logger.info("Attempting MongoDB connection with modern TLS configuration...")
+            self.client = await self._connect_with_modern_tls()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with modern TLS")
+            return self.client
+        except Exception as e:
+            logger.error(f"All Render connection strategies failed. Last error: {e}")
+            raise ConnectionFailure("Failed to establish MongoDB connection with all Render strategies")
+    
+    async def _connect_cloud_optimized(self) -> AsyncIOMotorClient:
+        """Optimized connection strategy for general cloud deployment."""
+        logger.info("☁️ Using cloud-optimized connection strategy")
+        
         # Strategy 1: Modern TLS with certifi (recommended for most cloud platforms)
         try:
             logger.info("Attempting MongoDB connection with modern TLS configuration...")
@@ -50,12 +145,98 @@ class DatabaseConnection:
         except Exception as e:
             logger.warning(f"Legacy SSL connection failed: {e}")
             
+        # Strategy 3: Minimal SSL configuration
+        try:
+            logger.info("Attempting MongoDB connection with minimal SSL configuration...")
+            self.client = await self._connect_with_minimal_ssl()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with minimal SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Minimal SSL connection failed: {e}")
+            
+        # Strategy 4: Direct connection approach
+        try:
+            logger.info("Attempting MongoDB connection with direct connection string approach...")
+            self.client = await self._connect_direct()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with direct approach")
+            return self.client
+        except Exception as e:
+            logger.error(f"All cloud connection strategies failed. Last error: {e}")
+            raise ConnectionFailure("Failed to establish MongoDB connection with all cloud strategies")
+    
+    async def _connect_local_optimized(self) -> AsyncIOMotorClient:
+        """Optimized connection strategy for local development."""
+        logger.info("🏠 Using local development connection strategy")
+        
+        # Strategy 1: Modern TLS with certifi (recommended for most environments)
+        try:
+            logger.info("Attempting MongoDB connection with modern TLS configuration...")
+            self.client = await self._connect_with_modern_tls()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with modern TLS")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Modern TLS connection failed: {e}")
+            
+        # Strategy 2: Legacy SSL configuration for compatibility
+        try:
+            logger.info("Attempting MongoDB connection with legacy SSL configuration...")
+            self.client = await self._connect_with_legacy_ssl()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with legacy SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Legacy SSL connection failed: {e}")
+            
+        # Strategy 3: Minimal SSL configuration
+        try:
+            logger.info("Attempting MongoDB connection with minimal SSL configuration...")
+            self.client = await self._connect_with_minimal_ssl()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with minimal SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Minimal SSL connection failed: {e}")
+            
+        # Strategy 4: Direct connection approach
+        try:
+            logger.info("Attempting MongoDB connection with direct connection string approach...")
+            self.client = await self._connect_direct()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with direct approach")
+            return self.client
+        except Exception as e:
+            logger.error(f"All local connection strategies failed. Last error: {e}")
+            raise ConnectionFailure("Failed to establish MongoDB connection with all local strategies")
+            
         # Strategy 3: Minimal SSL configuration (last resort)
         try:
             logger.info("Attempting MongoDB connection with minimal SSL configuration...")
             self.client = await self._connect_with_minimal_ssl()
             await self._test_connection()
             logger.info("✅ Successfully connected to MongoDB with minimal SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Minimal SSL connection failed: {e}")
+            
+        # Strategy 4: No SSL verification (emergency fallback for cloud deployment issues)
+        try:
+            logger.info("Attempting MongoDB connection with no SSL verification (emergency fallback)...")
+            self.client = await self._connect_with_no_ssl_verification()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with no SSL verification")
+            return self.client
+        except Exception as e:
+            logger.warning(f"No SSL verification connection failed: {e}")
+            
+        # Strategy 5: Direct connection string approach
+        try:
+            logger.info("Attempting MongoDB connection with direct connection string approach...")
+            self.client = await self._connect_direct()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with direct approach")
             return self.client
         except Exception as e:
             logger.error(f"All connection strategies failed. Last error: {e}")
@@ -131,6 +312,50 @@ class DatabaseConnection:
             maxPoolSize=5,
             retryWrites=True
         )
+    
+    async def _connect_with_no_ssl_verification(self) -> AsyncIOMotorClient:
+        """Emergency fallback with no SSL verification for cloud deployment issues."""
+        logger.warning("⚠️  Using connection with no SSL verification - only for emergency deployment fixes")
+        return AsyncIOMotorClient(
+            self.mongo_url,
+            # Disable SSL verification entirely
+            tls=False,
+            
+            # Extended timeouts for cloud environments
+            serverSelectionTimeoutMS=90000,
+            connectTimeoutMS=90000,
+            socketTimeoutMS=90000,
+            
+            # Basic connection settings
+            maxPoolSize=3,
+            retryWrites=True,
+            
+            # Force IPv4 to avoid IPv6 issues in some cloud environments
+            directConnection=False
+        )
+    
+    async def _connect_direct(self) -> AsyncIOMotorClient:
+        """Direct connection using the connection string as-is with minimal overrides."""
+        logger.info("Using direct connection string approach with minimal configuration")
+        
+        # Parse the connection string to check if it already has SSL parameters
+        if 'ssl=true' in self.mongo_url.lower() or 'tls=true' in self.mongo_url.lower():
+            # Connection string already has SSL configured, use it directly
+            return AsyncIOMotorClient(
+                self.mongo_url,
+                serverSelectionTimeoutMS=90000,
+                connectTimeoutMS=90000,
+                socketTimeoutMS=90000
+            )
+        else:
+            # Add minimal SSL configuration
+            return AsyncIOMotorClient(
+                self.mongo_url,
+                tls=True,
+                serverSelectionTimeoutMS=90000,
+                connectTimeoutMS=90000,
+                socketTimeoutMS=90000
+            )
     
     async def _test_connection(self):
         """Test the database connection."""

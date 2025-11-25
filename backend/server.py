@@ -3111,9 +3111,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+# Duplicate shutdown handler removed - using the proper one defined earlier
 
 # Export socket app for uvicorn - this should be the combined app
 # Don't overwrite the original app variable
