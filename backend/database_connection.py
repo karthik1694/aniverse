@@ -70,17 +70,27 @@ class DatabaseConnection:
         """Optimized connection strategy for Render deployment."""
         logger.info("🚀 Using Render-optimized connection strategy")
         
-        # Strategy 1: Render-specific SSL configuration (most compatible)
+        # Strategy 1: Render-specific minimal TLS (most compatible with Render)
         try:
-            logger.info("Attempting MongoDB connection with Render-specific SSL configuration...")
-            self.client = await self._connect_render_ssl()
+            logger.info("Attempting MongoDB connection with Render minimal TLS configuration...")
+            self.client = await self._connect_render_minimal_tls()
             await self._test_connection()
-            logger.info("✅ Successfully connected to MongoDB with Render SSL")
+            logger.info("✅ Successfully connected to MongoDB with Render minimal TLS")
             return self.client
         except Exception as e:
-            logger.warning(f"Render SSL connection failed: {e}")
+            logger.warning(f"Render minimal TLS connection failed: {e}")
             
-        # Strategy 2: Connection string with SSL parameters
+        # Strategy 2: Direct connection with built-in SSL
+        try:
+            logger.info("Attempting MongoDB connection with direct built-in SSL...")
+            self.client = await self._connect_render_direct()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with direct built-in SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Direct built-in SSL connection failed: {e}")
+            
+        # Strategy 3: Connection string with SSL parameters
         try:
             logger.info("Attempting MongoDB connection with SSL parameters in connection string...")
             self.client = await self._connect_with_ssl_params()
@@ -90,7 +100,7 @@ class DatabaseConnection:
         except Exception as e:
             logger.warning(f"SSL parameters connection failed: {e}")
             
-        # Strategy 3: Simplified TLS configuration
+        # Strategy 4: Simplified TLS configuration
         try:
             logger.info("Attempting MongoDB connection with simplified TLS configuration...")
             self.client = await self._connect_simplified_tls()
@@ -100,22 +110,12 @@ class DatabaseConnection:
         except Exception as e:
             logger.warning(f"Simplified TLS connection failed: {e}")
             
-        # Strategy 4: Direct connection (fallback)
+        # Strategy 5: Legacy compatibility mode
         try:
-            logger.info("Attempting MongoDB connection with direct connection string approach...")
-            self.client = await self._connect_direct()
+            logger.info("Attempting MongoDB connection with legacy compatibility mode...")
+            self.client = await self._connect_render_legacy()
             await self._test_connection()
-            logger.info("✅ Successfully connected to MongoDB with direct approach")
-            return self.client
-        except Exception as e:
-            logger.warning(f"Direct connection failed: {e}")
-            
-        # Strategy 5: Emergency fallback with no SSL verification
-        try:
-            logger.info("Attempting MongoDB connection with no SSL verification (emergency fallback)...")
-            self.client = await self._connect_with_no_ssl_verification()
-            await self._test_connection()
-            logger.info("✅ Successfully connected to MongoDB with no SSL verification")
+            logger.info("✅ Successfully connected to MongoDB with legacy compatibility")
             return self.client
         except Exception as e:
             logger.error(f"All Render connection strategies failed. Last error: {e}")
@@ -343,7 +343,6 @@ class DatabaseConnection:
             tlsCAFile=certifi.where(),
             tlsAllowInvalidCertificates=False,
             tlsAllowInvalidHostnames=False,
-            tlsInsecure=False,
             
             # Render-optimized timeouts (shorter for faster failover)
             serverSelectionTimeoutMS=30000,
@@ -363,16 +362,13 @@ class DatabaseConnection:
             # Additional Render optimizations
             compressors='zlib',
             readPreference='primaryPreferred',
-            directConnection=False,
-            
-            # Force IPv4 to avoid IPv6 issues on Render
-            family=0  # 0 = AF_UNSPEC (both IPv4 and IPv6), but prioritizes IPv4
+            directConnection=False
         )
     
     async def _connect_with_ssl_params(self) -> AsyncIOMotorClient:
         """Connection with SSL parameters added to connection string."""
-        # Add SSL parameters to the connection string if not present
-        ssl_params = "ssl=true&ssl_cert_reqs=CERT_REQUIRED&ssl_ca_certs=" + certifi.where().replace("\\", "/")
+        # Add modern SSL parameters to the connection string if not present
+        ssl_params = "tls=true&tlsAllowInvalidCertificates=false"
         
         if "?" in self.mongo_url:
             connection_url = f"{self.mongo_url}&{ssl_params}"
@@ -381,6 +377,7 @@ class DatabaseConnection:
             
         return AsyncIOMotorClient(
             connection_url,
+            tlsCAFile=certifi.where(),
             serverSelectionTimeoutMS=45000,
             connectTimeoutMS=45000,
             socketTimeoutMS=45000,
@@ -410,6 +407,57 @@ class DatabaseConnection:
             
             # Disable compression to reduce complexity
             compressors=None
+        )
+    
+    async def _connect_render_minimal_tls(self) -> AsyncIOMotorClient:
+        """Minimal TLS configuration specifically optimized for Render."""
+        return AsyncIOMotorClient(
+            self.mongo_url,
+            # Minimal TLS settings for Render compatibility
+            tls=True,
+            
+            # Render-optimized timeouts
+            serverSelectionTimeoutMS=30000,
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            
+            # Minimal connection pool
+            maxPoolSize=3,
+            minPoolSize=1,
+            
+            # Basic retry settings
+            retryWrites=True
+        )
+    
+    async def _connect_render_direct(self) -> AsyncIOMotorClient:
+        """Direct connection using MongoDB Atlas built-in SSL for Render."""
+        # MongoDB Atlas connection strings typically have SSL enabled by default
+        return AsyncIOMotorClient(
+            self.mongo_url,
+            # Let MongoDB handle SSL automatically
+            serverSelectionTimeoutMS=45000,
+            connectTimeoutMS=45000,
+            socketTimeoutMS=45000,
+            maxPoolSize=5,
+            retryWrites=True
+        )
+    
+    async def _connect_render_legacy(self) -> AsyncIOMotorClient:
+        """Legacy compatibility mode for Render deployment issues."""
+        logger.warning("⚠️  Using legacy compatibility mode - only for deployment fixes")
+        return AsyncIOMotorClient(
+            self.mongo_url,
+            # Disable SSL verification for legacy compatibility
+            tls=False,
+            
+            # Extended timeouts for problematic connections
+            serverSelectionTimeoutMS=60000,
+            connectTimeoutMS=60000,
+            socketTimeoutMS=60000,
+            
+            # Basic connection settings
+            maxPoolSize=3,
+            retryWrites=True
         )
     
     async def _connect_direct(self) -> AsyncIOMotorClient:
