@@ -41,6 +41,7 @@ The application was failing to deploy on Render due to:
 **File: `backend/requirements.txt`**
 - Added `pyopenssl==24.2.1` for enhanced SSL support
 - Updated `urllib3[secure]==2.5.0` for secure connections
+- Fixed `cryptography==43.0.3` to resolve dependency conflicts with pyopenssl
 
 ### 4. Render Configuration File
 
