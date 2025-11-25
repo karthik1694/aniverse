@@ -176,3 +176,62 @@ button:active {
 .glow-on-hover:hover {
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Improve touch targets */
+  button, .button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better text readability on mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Prevent horizontal scroll */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+  
+  /* Improve form inputs on mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    border-radius: 8px;
+  }
+  
+  /* Better scrolling on mobile */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Reduce animations on mobile for better performance */
+  .animate-pulse, .animate-spin, .animate-bounce {
+    animation-duration: 2s;
+  }
+}
+
+/* Touch-friendly hover states */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  button:hover, .button:hover {
+    transform: none;
+  }
+  
+  /* Add active states for touch feedback */
+  button:active, .button:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Sharper borders and shadows */
+  .glass {
+    border-width: 0.5px;
+  }
+}

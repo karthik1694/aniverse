@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
-import { MessageCircle, Users, Plus, Settings, LogOut, Crown } from 'lucide-react';
+import { MessageCircle, Users, Plus, Settings, LogOut, Crown, Menu } from 'lucide-react';
 import UserArc from './UserArc';
 import PremiumUpgrade from './PremiumUpgrade';
 import ArcProgressionNotification from './ArcProgressionNotification';
@@ -20,6 +20,13 @@ export default function MainLayout({ user, setUser, children }) {
   const [friendRequests, setFriendRequests] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Helper function to check if a user is online based on real-time data
+  const isUserOnline = (userId) => {
+    return onlineUsers.has(userId);
+  };
 
 
   useEffect(() => {
@@ -33,13 +40,36 @@ export default function MainLayout({ user, setUser, children }) {
 
     newSocket.on('connect', () => {
       console.log('Connected to socket for arc progression and real-time updates');
-      // Register this user for global notifications
+      // Register this user for global notifications and online status
       if (user) {
         newSocket.emit('register_for_notifications', {
           user_id: user.id,
           user_data: user
         });
+        // Request current online users list
+        newSocket.emit('get_online_users');
       }
+    });
+
+    // Listen for online users updates
+    newSocket.on('online_users_update', (onlineUsersList) => {
+      console.log('Online users update:', onlineUsersList);
+      setOnlineUsers(new Set(onlineUsersList));
+    });
+
+    // Listen for user online status changes
+    newSocket.on('user_online', (userId) => {
+      console.log('User came online:', userId);
+      setOnlineUsers(prev => new Set([...prev, userId]));
+    });
+
+    newSocket.on('user_offline', (userId) => {
+      console.log('User went offline:', userId);
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
     });
 
     newSocket.on('direct_message_received', (messageData) => {
@@ -219,11 +249,350 @@ export default function MainLayout({ user, setUser, children }) {
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] text-white flex overflow-hidden">
-      {/* Fixed Sidebar */}
-      <div className="w-64 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-r border-gray-800/50 flex flex-col flex-shrink-0">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-b border-gray-800/50 z-50 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+            <h1 className="text-lg font-bold text-white">
+              otakucafe<span className="text-sm text-gray-400">.fun</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-2"
+              onClick={() => navigate('/profile-setup')}
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-r border-gray-800/50 flex flex-col">
+            {/* Mobile Sidebar Content - Same as desktop sidebar */}
+            <div className="p-4 border-b border-gray-800/50 pt-16">
+              <h1 className="text-xl font-bold text-white">
+                otakucafe<span className="text-sm text-gray-400">.fun</span>
+              </h1>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="p-3 border-b border-gray-800/50">
+              <div className="flex gap-2">
+                <Button
+                  variant={activeTab === 'chat' ? 'default' : 'ghost'}
+                  className={`flex-1 ${
+                    activeTab === 'chat'
+                      ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                  onClick={() => {
+                    setActiveTab('chat');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Chat
+                </Button>
+                <Button
+                  variant={activeTab === 'friends' ? 'default' : 'ghost'}
+                  className={`flex-1 ${
+                    activeTab === 'friends'
+                      ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                  onClick={() => {
+                    setActiveTab('friends');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Friends
+                </Button>
+              </div>
+            </div>
+
+            {/* Main Navigation */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {/* New Chat Button */}
+              <Button
+                className="w-full justify-start bg-cyan-500 hover:bg-cyan-600 text-white"
+                onClick={() => {
+                  navigate('/chat');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Chat
+              </Button>
+
+              {/* Dynamic Content Section - Same as desktop */}
+              <div className="pt-4">
+                {activeTab === 'friends' ? (
+                  <div>
+                    {/* Friend Requests */}
+                    {friendRequests.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                          Friend Requests ({friendRequests.length})
+                        </h3>
+                        <div className="space-y-2 px-3">
+                          {friendRequests.map(({ request, from_user }) => (
+                            <div key={request.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={from_user.picture} />
+                                  <AvatarFallback className="text-xs">{from_user.name[0]}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold text-white text-xs">{from_user.name}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  onClick={() => handleAcceptRequest(request.id)}
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white h-6 text-xs px-2"
+                                >
+                                  ✓
+                                </Button>
+                                <Button
+                                  onClick={() => handleRejectRequest(request.id)}
+                                  size="sm"
+                                  className="bg-red-600 hover:bg-red-700 text-white h-6 text-xs px-2"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Friends List */}
+                    <div>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                        Friends ({friends.length})
+                      </h3>
+                      {friends.length > 0 ? (
+                        <div className="space-y-2 px-3">
+                          {friends.map((friend) => (
+                            <div
+                              key={friend.id}
+                              className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+                              onClick={() => {
+                                handleFriendClick(friend);
+                                setMobileMenuOpen(false);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={friend.picture} />
+                                    <AvatarFallback className="text-xs">{friend.name[0]}</AvatarFallback>
+                                  </Avatar>
+                                  {isUserOnline(friend.id) ? (
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
+                                  ) : (
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 border border-[#0f1419] rounded-full"></div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-white truncate text-xs">{friend.name}</p>
+                                  {friend.favorite_anime.length > 0 && (
+                                    <p className="text-xs text-gray-400 truncate">
+                                      Likes: {friend.favorite_anime.slice(0, 2).join(', ')}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  💬
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center px-3">
+                          <Users className="h-8 w-8 mb-2 text-gray-600" />
+                          <p className="text-xs text-gray-400">
+                            No friends yet. Start matching to make connections!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                      Direct Messages
+                    </h3>
+                    {directMessages.length > 0 ? (
+                      <div className="space-y-2 px-3">
+                        {directMessages.map((conversation) => (
+                          <div
+                            key={conversation.friend.id}
+                            className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+                            onClick={() => {
+                              handleFriendClick(conversation.friend);
+                              setMobileMenuOpen(false);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="relative">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={conversation.friend.picture} />
+                                  <AvatarFallback className="text-xs">{conversation.friend.name[0]}</AvatarFallback>
+                                </Avatar>
+                                {isUserOnline(conversation.friend.id) ? (
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
+                                ) : (
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 border border-[#0f1419] rounded-full"></div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-white truncate text-xs">{conversation.friend.name}</p>
+                                <p className="text-xs text-gray-400 truncate">
+                                  {conversation.lastMessage.message.length > 30
+                                    ? conversation.lastMessage.message.substring(0, 30) + '...'
+                                    : conversation.lastMessage.message
+                                  }
+                                </p>
+                              </div>
+                              {conversation.unreadCount > 0 && (
+                                <div className="bg-cyan-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                                  {conversation.unreadCount}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center px-3">
+                        <div className="text-4xl mb-2">📭</div>
+                        <p className="text-xs text-gray-400">
+                          No direct messages yet. Click on friends to start chatting!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Premium Section */}
+            <div className="p-3 border-t border-gray-800/50">
+              {user.premium ? (
+                <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="h-5 w-5 text-yellow-400" />
+                    <h3 className="font-bold text-yellow-400 text-sm">Premium Active</h3>
+                  </div>
+                  <p className="text-xs text-gray-300 mb-3">
+                    You're enjoying all premium features! 🎉
+                  </p>
+                  <div className="text-xs text-yellow-300">
+                    ✨ Unlimited matches<br/>
+                    ✨ Priority matching<br/>
+                    ✨ Extended video chat
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="h-5 w-5 text-yellow-400" />
+                    <h3 className="font-bold text-yellow-400 text-sm">Go Premium</h3>
+                  </div>
+                  <p className="text-xs text-gray-300 mb-3">
+                    Unlock exclusive features and support the platform
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setShowPremiumUpgrade(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold text-xs"
+                  >
+                    Upgrade Now
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* User Arc Section */}
+            <div className="p-3 border-t border-gray-800/50">
+              <UserArc compact={true} />
+            </div>
+
+            {/* User Profile Section */}
+            <div className="p-3 border-t border-gray-800/50 bg-[#0f1419]/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Avatar className="h-10 w-10 border-2 border-white/10">
+                    <AvatarImage src={user.picture} />
+                    <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600">
+                      {user.name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0f1419] rounded-full"></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white text-sm truncate">{user.name}</p>
+                  <p className="text-xs text-gray-400 truncate">Online</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-white/5"
+                    onClick={() => {
+                      navigate('/profile-setup');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <Settings className="h-4 w-4 text-gray-400" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-white/5"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 text-gray-400" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex w-64 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-r border-gray-800/50 flex-col flex-shrink-0">
         {/* Logo */}
         <div className="p-4 border-b border-gray-800/50">
-          <h1 className="text-xl font-bold text-cyan-400">AniChat.gg</h1>
+          <h1 className="text-xl font-bold text-white">
+            otakucafe<span className="text-sm text-gray-400">.fun</span>
+          </h1>
         </div>
 
         {/* Navigation Tabs */}
@@ -327,10 +696,18 @@ export default function MainLayout({ user, setUser, children }) {
                           onClick={() => handleFriendClick(friend)}
                         >
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={friend.picture} />
-                              <AvatarFallback className="text-xs">{friend.name[0]}</AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={friend.picture} />
+                                <AvatarFallback className="text-xs">{friend.name[0]}</AvatarFallback>
+                              </Avatar>
+                              {/* Online status indicator - consistent based on user ID */}
+                              {isUserOnline(friend.id) ? (
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
+                              ) : (
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 border border-[#0f1419] rounded-full"></div>
+                              )}
+                            </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-white truncate text-xs">{friend.name}</p>
                               {friend.favorite_anime.length > 0 && (
@@ -370,10 +747,18 @@ export default function MainLayout({ user, setUser, children }) {
                         onClick={() => handleFriendClick(conversation.friend)}
                       >
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={conversation.friend.picture} />
-                            <AvatarFallback className="text-xs">{conversation.friend.name[0]}</AvatarFallback>
-                          </Avatar>
+                          <div className="relative">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={conversation.friend.picture} />
+                              <AvatarFallback className="text-xs">{conversation.friend.name[0]}</AvatarFallback>
+                            </Avatar>
+                            {/* Online status indicator - consistent based on user ID */}
+                            {isUserOnline(conversation.friend.id) ? (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
+                            ) : (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 border border-[#0f1419] rounded-full"></div>
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-white truncate text-xs">{conversation.friend.name}</p>
                             <p className="text-xs text-gray-400 truncate">
@@ -449,15 +834,19 @@ export default function MainLayout({ user, setUser, children }) {
         {/* User Profile Section */}
         <div className="p-3 border-t border-gray-800/50 bg-[#0f1419]/80 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-white/10">
-              <AvatarImage src={user.picture} />
-              <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600">
-                {user.name[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-10 w-10 border-2 border-white/10">
+                <AvatarImage src={user.picture} />
+                <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600">
+                  {user.name[0]}
+                </AvatarFallback>
+              </Avatar>
+              {/* Current user is always online */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0f1419] rounded-full"></div>
+            </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-white text-sm truncate">{user.name}</p>
-              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+              <p className="text-xs text-gray-400 truncate">Online</p>
             </div>
             <div className="flex gap-1">
               <Button
@@ -482,7 +871,7 @@ export default function MainLayout({ user, setUser, children }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col pt-16 md:pt-0">
         {children}
       </div>
 

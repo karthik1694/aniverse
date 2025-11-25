@@ -1,36 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Video, MessageCircle, Users, Sparkles, Heart, Star } from 'lucide-react';
-import GenderSelectionModal from '../components/GenderSelectionModal';
 
 export default function LandingPage() {
-  const [showGenderModal, setShowGenderModal] = useState(false);
-
-  useEffect(() => {
-    // Show gender modal when user first visits the site
-    const hasSeenGenderModal = localStorage.getItem('hasSeenGenderModal');
-    if (!hasSeenGenderModal) {
-      setShowGenderModal(true);
-    }
-  }, []);
-
   const handleLogin = () => {
     const redirectUrl = `${window.location.origin}/`;
     console.log('Redirecting to auth with URL:', redirectUrl);
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-  };
-
-  const handleGenderSelect = (gender) => {
-    console.log('Selected gender:', gender);
-    localStorage.setItem('hasSeenGenderModal', 'true');
-    localStorage.setItem('selectedGender', gender);
-    // After gender selection, proceed to login
-    handleLogin();
-  };
-
-  const handleCloseGenderModal = () => {
-    setShowGenderModal(false);
-    localStorage.setItem('hasSeenGenderModal', 'true');
   };
 
   return (
@@ -113,18 +89,20 @@ export default function LandingPage() {
       </div>
       {/* Navigation */}
       <nav className="border-b border-gray-800/50 bg-[#1a2332]/95 backdrop-blur-sm flex-shrink-0 relative z-10">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-2 rounded-lg shadow-lg shadow-cyan-500/25">
-                <Sparkles className="h-6 w-6 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-1.5 sm:p-2 rounded-lg shadow-lg shadow-cyan-500/25">
+                <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-white">AniChat.gg</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-white">
+                otakucafe<span className="text-sm sm:text-lg text-gray-400">.fun</span>
+              </h1>
             </div>
             <Button
               onClick={handleLogin}
               data-testid="landing-login-btn"
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-semibold border-0 text-base h-12 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold border-0 text-sm sm:text-base h-10 sm:h-12 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300"
             >
               Sign In
             </Button>
@@ -134,35 +112,35 @@ export default function LandingPage() {
 
       {/* Main Content */}
       <div className="flex-1">
-        <div className="container mx-auto px-6 py-16">
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-16">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-8">
-              <Star className="h-5 w-5 text-cyan-400" />
-              <span className="text-base text-cyan-400 font-medium">Join 10,000+ anime fans worldwide</span>
+            <div className="inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-6 sm:mb-8">
+              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
+              <span className="text-sm sm:text-base text-cyan-400 font-medium">Join 10,000+ anime fans worldwide</span>
           </div>
           
-          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight px-2">
             Find Your{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500">
               Anime Friends
             </span>
           </h2>
           
-          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-xl text-gray-300 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed px-4">
             Connect with anime lovers from around the world! Chat, share recommendations, discuss episodes, and build lasting friendships in our welcoming community.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
             <Button
               onClick={handleLogin}
               data-testid="get-started-btn"
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg border-0 h-14 shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg border-0 h-12 sm:h-14 shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300"
             >
               Start Chatting Now
             </Button>
             <Button
               variant="outline"
-              className="border-gray-700 hover:bg-gray-800/50 text-white px-8 py-4 rounded-lg font-semibold text-lg h-14 hover:border-gray-600 hover:shadow-lg hover:shadow-gray-500/20 hover:scale-105 transition-all duration-300"
+              className="border-gray-700 hover:bg-gray-800/50 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg h-12 sm:h-14 hover:border-gray-600 hover:shadow-lg hover:shadow-gray-500/20 hover:scale-105 transition-all duration-300"
             >
               Explore Community
             </Button>
@@ -170,87 +148,81 @@ export default function LandingPage() {
           </div>
 
           {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-12 sm:mt-16 max-w-6xl mx-auto px-4">
             <div
-              className="bg-[#212d3d]/80 backdrop-blur-sm border border-gray-800/50 p-8 rounded-xl hover:border-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 group hover:scale-105"
+              className="bg-[#212d3d]/80 backdrop-blur-sm border border-gray-800/50 p-6 sm:p-8 rounded-xl hover:border-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 group hover:scale-105"
             data-testid="feature-matching"
           >
-              <div className="bg-cyan-500/10 w-16 h-16 rounded-lg flex items-center justify-center mb-6 group-hover:bg-cyan-500/20 transition-colors group-hover:shadow-lg group-hover:shadow-cyan-500/25">
-                <Users className="h-8 w-8 text-cyan-400" />
+              <div className="bg-cyan-500/10 w-12 h-12 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center mb-4 sm:mb-6 group-hover:bg-cyan-500/20 transition-colors group-hover:shadow-lg group-hover:shadow-cyan-500/25">
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white">Smart Matching</h3>
-              <p className="text-gray-400 text-base leading-relaxed">
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white">Smart Matching</h3>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
               Connect with fans who share your anime interests! From action-packed shonen to heartwarming slice-of-life - find your tribe.
               </p>
             </div>
 
             <div
-              className="bg-[#212d3d]/80 backdrop-blur-sm border border-gray-800/50 p-8 rounded-xl hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 group hover:scale-105"
+              className="bg-[#212d3d]/80 backdrop-blur-sm border border-gray-800/50 p-6 sm:p-8 rounded-xl hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 group hover:scale-105"
             data-testid="feature-video"
           >
-              <div className="bg-blue-500/10 w-16 h-16 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors group-hover:shadow-lg group-hover:shadow-blue-500/25">
-                <Video className="h-8 w-8 text-blue-400" />
+              <div className="bg-blue-500/10 w-12 h-12 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center mb-4 sm:mb-6 group-hover:bg-blue-500/20 transition-colors group-hover:shadow-lg group-hover:shadow-blue-500/25">
+                <Video className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white">Live Conversations</h3>
-              <p className="text-gray-400 text-base leading-relaxed">
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white">Live Conversations</h3>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
               Chat face-to-face with anime enthusiasts worldwide. Share theories, discuss episodes, and geek out about your favorites!
               </p>
             </div>
 
             <div
-              className="bg-[#212d3d]/80 backdrop-blur-sm border border-gray-800/50 p-8 rounded-xl hover:border-purple-500/30 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group hover:scale-105"
+              className="bg-[#212d3d]/80 backdrop-blur-sm border border-gray-800/50 p-6 sm:p-8 rounded-xl hover:border-purple-500/30 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group hover:scale-105 sm:col-span-2 lg:col-span-1"
             data-testid="feature-watchparty"
           >
-              <div className="bg-purple-500/10 w-16 h-16 rounded-lg flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition-colors group-hover:shadow-lg group-hover:shadow-purple-500/25">
-                <MessageCircle className="h-8 w-8 text-purple-400" />
+              <div className="bg-purple-500/10 w-12 h-12 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center mb-4 sm:mb-6 group-hover:bg-purple-500/20 transition-colors group-hover:shadow-lg group-hover:shadow-purple-500/25">
+                <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-purple-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white">Watch Together</h3>
-              <p className="text-gray-400 text-base leading-relaxed">
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white">Watch Together</h3>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
               Host or join watch parties with friends! Experience anime together in real-time with synchronized viewing and live reactions.
               </p>
             </div>
           </div>
 
           {/* CTA Section */}
-          <div className="mt-20 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-gray-800/50 p-12 rounded-2xl max-w-4xl mx-auto backdrop-blur-sm shadow-2xl shadow-cyan-500/5">
+          <div className="mt-16 sm:mt-20 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-gray-800/50 p-6 sm:p-12 rounded-2xl max-w-4xl mx-auto backdrop-blur-sm shadow-2xl shadow-cyan-500/5">
             <div className="text-center">
-              <div className="inline-flex items-center gap-3 mb-6">
-                <Users className="h-6 w-6 text-cyan-400 animate-pulse" />
-                <span className="text-base text-cyan-400 font-medium">Your Anime Community Awaits</span>
+              <div className="inline-flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-400 animate-pulse" />
+                <span className="text-sm sm:text-base text-cyan-400 font-medium">Your Anime Community Awaits</span>
             </div>
             
-              <h3 className="text-4xl font-bold mb-4 text-white">Ready to Make Friends?</h3>
-              <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
+              <h3 className="text-2xl sm:text-4xl font-bold mb-3 sm:mb-4 text-white">Ready to Make Friends?</h3>
+              <p className="text-base sm:text-lg text-gray-400 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
               Join thousands of anime fans from all walks of life. Share your passion, discover new series, and build meaningful friendships!
               </p>
               
               <Button
                 onClick={handleLogin}
                 data-testid="cta-join-btn"
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-10 py-4 rounded-lg font-bold text-lg border-0 h-14 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300"
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-8 sm:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg border-0 h-12 sm:h-14 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300"
               >
                 Join the Community
               </Button>
               
-              <p className="text-sm text-gray-500 mt-6">Free to join • No credit card required</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-4 sm:mt-6">Free to join • No credit card required</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="border-t border-gray-800/50 mt-12 py-6 bg-[#151d28]">
-          <div className="container mx-auto px-6 text-center">
-            <p className="text-gray-500 text-sm">&copy; 2025 AniChat.gg. Made with ❤️ for the anime community.</p>
+        <footer className="border-t border-gray-800/50 mt-8 sm:mt-12 py-4 sm:py-6 bg-[#151d28]">
+          <div className="container mx-auto px-4 sm:px-6 text-center">
+            <p className="text-gray-500 text-xs sm:text-sm">&copy; 2025 otakucafe.fun. Made with ❤️ for the anime community.</p>
           </div>
         </footer>
       </div>
 
-      {/* Gender Selection Modal */}
-      <GenderSelectionModal
-        isOpen={showGenderModal}
-        onClose={handleCloseGenderModal}
-        onGenderSelect={handleGenderSelect}
-      />
     </div>
   );
 }

@@ -86,7 +86,7 @@ export default function PremiumUpgrade({ user, setUser, onClose }) {
               <h2 className="text-2xl font-bold text-white">Upgrade to Premium</h2>
             </div>
             <p className="text-gray-300 text-sm">
-              Unlock exclusive features and support AniChat.gg
+              Unlock exclusive features and support otakucafe.fun
             </p>
           </div>
 

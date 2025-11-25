@@ -11,6 +11,7 @@ import { io } from 'socket.io-client';
 import { Send, UserPlus, X, ArrowLeft, Loader2 } from 'lucide-react';
 import ArcProgressionNotification from '../components/ArcProgressionNotification';
 import MatchingScreen from '../components/MatchingScreen';
+import TypingIndicator from '../components/TypingIndicator';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -28,6 +29,8 @@ export default function ChatPage({ user }) {
   const [matchingStats, setMatchingStats] = useState({ totalUsers: 0, activeMatchers: 0 });
   const [skipCount, setSkipCount] = useState(0);
   const [showSkippedNotification, setShowSkippedNotification] = useState(false);
+  const [partnerTyping, setPartnerTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState(null);
 
   // Dynamic usernames and avatars
   const currentUser = {
@@ -161,7 +164,21 @@ export default function ChatPage({ user }) {
       // Don't stop matching, just show the message
     });
 
+    newSocket.on('partner_typing_start', (data) => {
+      console.log('Partner started typing:', data);
+      setPartnerTyping(true);
+    });
+
+    newSocket.on('partner_typing_stop', () => {
+      console.log('Partner stopped typing');
+      setPartnerTyping(false);
+    });
+
     return () => {
+      // Clean up typing timeout
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
       newSocket.close();
     };
   }, []);
@@ -239,8 +256,60 @@ export default function ChatPage({ user }) {
 
   const handleSendMessage = () => {
     if (messageInput.trim() && socket) {
+      // Stop typing indicator when sending message
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        setTypingTimeout(null);
+      }
+      socket.emit('typing_stop');
+      
       socket.emit('send_message', { message: messageInput });
       setMessageInput('');
+    }
+  };
+
+  const handleTypingStart = () => {
+    if (socket && socket.connected) {
+      socket.emit('typing_start');
+      
+      // Clear existing timeout
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+      
+      // Set new timeout to stop typing indicator after 3 seconds of inactivity
+      const timeout = setTimeout(() => {
+        socket.emit('typing_stop');
+        setTypingTimeout(null);
+      }, 3000);
+      
+      setTypingTimeout(timeout);
+    }
+  };
+
+  const handleTypingStop = () => {
+    if (socket && socket.connected) {
+      socket.emit('typing_stop');
+      
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        setTypingTimeout(null);
+      }
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setMessageInput(value);
+    
+    // Start typing indicator if user is typing
+    if (value.trim() && !typingTimeout) {
+      handleTypingStart();
+    }
+    
+    // If input becomes empty, stop typing indicator
+    if (!value.trim() && typingTimeout) {
+      handleTypingStop();
     }
   };
 
@@ -257,7 +326,14 @@ export default function ChatPage({ user }) {
 
   const handleLeaveChat = () => {
     try {
+      // Clean up typing timeout
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        setTypingTimeout(null);
+      }
+      
       if (socket && socket.connected) {
+        socket.emit('typing_stop');
         socket.emit('leave_chat');
       }
       // Show notification when user leaves
@@ -266,6 +342,7 @@ export default function ChatPage({ user }) {
       setMatched(false);
       setPartner(null);
       setMessages([]);
+      setPartnerTyping(false);
     } catch (error) {
       console.error('Error leaving chat:', error);
     } finally {
@@ -377,28 +454,28 @@ export default function ChatPage({ user }) {
         </div>
         
         {/* AniChat Header */}
-        <div className="flex-shrink-0 bg-[#212d3d]/80 backdrop-blur-sm border-b border-gray-800/50 px-4 py-3 relative z-10">
+        <div className="flex-shrink-0 bg-[#212d3d]/80 backdrop-blur-sm border-b border-gray-800/50 px-3 sm:px-4 py-3 relative z-10">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 onClick={handleLeaveChat}
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white p-2"
+                className="text-gray-400 hover:text-white p-1.5 sm:p-2"
                 data-testid="leave-chat-btn"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div className="text-white font-medium">
+              <div className="text-white font-medium text-sm sm:text-base">
                 # anime-chat
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1 sm:gap-2">
               <Button
                 onClick={handleSendFriendRequest}
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white p-1.5 sm:p-2"
                 data-testid="send-friend-request-btn"
               >
                 <UserPlus className="h-4 w-4" />
@@ -407,7 +484,7 @@ export default function ChatPage({ user }) {
                 onClick={handleSkipPartner}
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm"
                 data-testid="skip-partner-btn"
               >
                 Skip
@@ -458,32 +535,32 @@ export default function ChatPage({ user }) {
             )}
             
             {/* Match Notification Banner */}
-            <div className="bg-[#212d3d]/80 backdrop-blur-sm px-4 py-3 border-b border-gray-800/50">
+            <div className="bg-[#212d3d]/80 backdrop-blur-sm px-3 sm:px-4 py-3 border-b border-gray-800/50">
               {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0) ? (
                 <>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-orange-400">✨</span>
-                    <span className="text-white font-medium">You both like</span>
-                    <span className="text-purple-400 font-bold">
+                    <span className="text-white font-medium text-sm sm:text-base">You both like</span>
+                    <span className="text-purple-400 font-bold text-sm sm:text-base">
                       {sharedUniverse.shared_anime?.length > 0
                         ? sharedUniverse.shared_anime[0]
                         : sharedUniverse.shared_genres?.[0] || 'anime'
                       }
                     </span>
                   </div>
-                  <div className="text-gray-300 text-sm">
+                  <div className="text-gray-300 text-xs sm:text-sm">
                     You are now chatting with <span className="text-purple-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
                   </div>
                 </>
               ) : (
-                <div className="text-gray-300 text-sm">
+                <div className="text-gray-300 text-xs sm:text-sm">
                   You are now chatting with <span className="text-purple-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
                 </div>
               )}
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-1">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center text-gray-400">
@@ -512,10 +589,10 @@ export default function ChatPage({ user }) {
                   });
                   
                   return (
-                    <div key={index} className="flex items-start gap-3 px-2 py-1 hover:bg-[#212d3d]/60 rounded group">
+                    <div key={index} className="flex items-start gap-2 sm:gap-3 px-1 sm:px-2 py-1 hover:bg-[#212d3d]/60 rounded group">
                       {/* Avatar */}
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-1"
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-lg flex-shrink-0 mt-1"
                         style={{ backgroundColor: displayUser.color }}
                       >
                         {displayUser.avatar}
@@ -525,10 +602,10 @@ export default function ChatPage({ user }) {
                       <div className="flex-1 min-w-0">
                         {/* Username and Timestamp */}
                         <div className="flex items-baseline gap-2 mb-1">
-                          <span className="font-medium text-white text-sm">
+                          <span className="font-medium text-white text-xs sm:text-sm">
                             {displayUser.name}
                           </span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-400 hidden sm:inline">
                             {timestamp}
                           </span>
                         </div>
@@ -547,43 +624,50 @@ export default function ChatPage({ user }) {
                   );
                 })
               )}
+              
+              {/* Typing Indicator */}
+              <TypingIndicator
+                isTyping={partnerTyping}
+                userName={partner?.name || "Partner"}
+              />
+              
               <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}
-            <div className="px-4 pb-4">
+            <div className="px-3 sm:px-4 pb-3 sm:pb-4">
               <div className="relative">
-                {/* ESC and SKIP buttons */}
-                <div className="absolute left-2 top-2 flex gap-2 z-10">
+                {/* ESC and SKIP buttons - Mobile optimized */}
+                <div className="absolute left-1 sm:left-2 top-1 sm:top-2 flex gap-1 sm:gap-2 z-10">
                   <Button
                     onClick={handleLeaveChat}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white text-xs px-3 py-1 h-auto rounded"
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white text-xs px-2 sm:px-3 py-1 h-auto rounded"
                     size="sm"
                   >
                     ESC
                   </Button>
                   <Button
                     onClick={handleSkipPartner}
-                    className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 h-auto rounded"
+                    className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 sm:px-3 py-1 h-auto rounded"
                     size="sm"
                   >
                     SKIP
                   </Button>
                 </div>
                 
-                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-3 px-4 py-3 pl-32">
+                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 pl-20 sm:pl-32">
                   <div className="flex-1">
                     <Input
                       value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
+                      onChange={handleInputChange}
                       onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                       placeholder="Send a message"
-                      className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto"
+                      className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto text-sm sm:text-base"
                       data-testid="message-input"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-gray-400 text-sm cursor-pointer hover:text-white">GIF</div>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="text-gray-400 text-xs sm:text-sm cursor-pointer hover:text-white hidden sm:block">GIF</div>
                     <div className="text-gray-400 text-sm cursor-pointer hover:text-white">😊</div>
                   </div>
                 </div>

@@ -72,6 +72,7 @@ class User(BaseModel):
     name: str
     picture: Optional[str] = None
     bio: Optional[str] = ""
+    gender: Optional[str] = None  # "male" or "female"
     favorite_anime: List[str] = []
     favorite_genres: List[str] = []
     favorite_themes: List[str] = []
@@ -171,6 +172,7 @@ class UserEpisodeProgress(BaseModel):
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
+    gender: Optional[str] = None
     favorite_anime: Optional[List[str]] = None
     favorite_genres: Optional[List[str]] = None
     favorite_themes: Optional[List[str]] = None
@@ -1997,6 +1999,8 @@ async def disconnect(sid):
     
     if user_to_remove:
         del active_users[user_to_remove]
+        # Notify all clients that this user went offline
+        await sio.emit('user_offline', user_to_remove)
     
     # Remove from matching queue
     matching_queue = [u for u in matching_queue if u['sid'] != sid]
@@ -2058,6 +2062,9 @@ async def join_matching(sid, data):
         user_dict = user.dict()
         user_dict['created_at'] = user_dict['created_at'].isoformat() if isinstance(user_dict['created_at'], datetime) else user_dict['created_at']
         active_users[user_id] = {'sid': sid, 'user_data': user_dict}
+        
+        # Notify all clients that this user came online
+        await sio.emit('user_online', user_id)
         
         # Declare global variables at the start
         global matching_queue
@@ -2220,6 +2227,35 @@ async def send_message(sid, data):
     
     # Update arc progression for message sender
     await update_user_stats(match_info['user_id'], "messages_sent", 1)
+@sio.event
+async def typing_start(sid, data):
+    """Handle when a user starts typing"""
+    if sid not in active_matches:
+        return
+    
+    match_info = active_matches[sid]
+    partner_sid = match_info['partner_sid']
+    
+    # Get user data to send partner's name
+    user_id = match_info['user_id']
+    user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if user_doc:
+        user = User(**user_doc)
+        await sio.emit('partner_typing_start', {
+            'user_name': user.name,
+            'user_id': user_id
+        }, room=partner_sid)
+
+@sio.event
+async def typing_stop(sid, data):
+    """Handle when a user stops typing"""
+    if sid not in active_matches:
+        return
+    
+    match_info = active_matches[sid]
+    partner_sid = match_info['partner_sid']
+    
+    await sio.emit('partner_typing_stop', room=partner_sid)
 
 @sio.event
 async def send_friend_request_event(sid, data):
@@ -2777,6 +2813,9 @@ async def register_for_notifications(sid, data):
         # Register user in active_users for global notifications
         active_users[user_id] = {'sid': sid, 'user_data': user_data}
         
+        # Notify all clients that this user came online
+        await sio.emit('user_online', user_id)
+        
         await sio.emit('notification_registration_success', {
             'message': 'Registered for notifications',
             'user_id': user_id
@@ -2927,6 +2966,16 @@ async def leave_direct_chat(sid):
         
     except Exception as e:
         logging.error(f"Error in leave_direct_chat: {e}", exc_info=True)
+
+@sio.event
+async def get_online_users(sid):
+    """Send list of currently online users to the requesting client"""
+    try:
+        online_user_ids = list(active_users.keys())
+        await sio.emit('online_users_update', online_user_ids, room=sid)
+        logging.info(f"Sent online users list to {sid}: {len(online_user_ids)} users online")
+    except Exception as e:
+        logging.error(f"Error in get_online_users: {e}")
 
 @api_router.delete("/chat/history/{friend_id}")
 async def delete_chat_history(friend_id: str, request: Request):

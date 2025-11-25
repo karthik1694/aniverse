@@ -17,10 +17,6 @@ export default function GenderSelectionModal({ isOpen, onClose, onGenderSelect }
     }
   };
 
-  const handleLogin = () => {
-    const redirectUrl = `${window.location.origin}/`;
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-  };
 
   if (!isOpen) return null;
 
@@ -103,14 +99,6 @@ export default function GenderSelectionModal({ isOpen, onClose, onGenderSelect }
               I AGREE, LET'S GO!
             </Button>
             
-            <div className="text-center">
-              <button
-                onClick={handleLogin}
-                className="text-sm text-gray-400 hover:text-cyan-400 transition-colors duration-200"
-              >
-                Already have an account? Login
-              </button>
-            </div>
           </div>
         </div>
       </div>

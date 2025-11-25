@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,6 +23,14 @@ export default function DirectChat({ user }) {
   const socketRef = useRef(null);
   const messageIdsRef = useRef(new Set());
   const dropdownRef = useRef(null);
+  const dropdownButtonRef = useRef(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+
+  // Helper function to check if a user is online based on real-time data
+  const isUserOnline = (userId) => {
+    return onlineUsers.has(userId);
+  };
 
   useEffect(() => {
     // Prevent users from trying to chat with themselves
@@ -45,16 +54,22 @@ export default function DirectChat({ user }) {
   // Handle click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (showDropdown &&
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target) &&
+          dropdownButtonRef.current &&
+          !dropdownButtonRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showDropdown]);
 
   const markMessagesAsRead = async () => {
     try {
@@ -175,6 +190,26 @@ export default function DirectChat({ user }) {
       newSocket.emit('join_direct_chat', {
         user_id: user.id,
         friend_id: friendId
+      });
+      // Request current online users list
+      newSocket.emit('get_online_users');
+    });
+
+    // Listen for online users updates
+    newSocket.on('online_users_update', (onlineUsersList) => {
+      setOnlineUsers(new Set(onlineUsersList));
+    });
+
+    // Listen for user online status changes
+    newSocket.on('user_online', (userId) => {
+      setOnlineUsers(prev => new Set([...prev, userId]));
+    });
+
+    newSocket.on('user_offline', (userId) => {
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
       });
     });
 
@@ -315,7 +350,7 @@ export default function DirectChat({ user }) {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex flex-col relative overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] relative">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Floating Particles */}
@@ -393,147 +428,171 @@ export default function DirectChat({ user }) {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-cyan-500/5 via-transparent to-transparent rounded-full blur-3xl"></div>
       </div>
       
-      {/* Chat Header */}
-      <div className="bg-gradient-to-r from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-md border-b border-cyan-500/30 p-4 flex items-center gap-3 relative z-10 shadow-lg">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            cleanup();
-            navigate('/chat');
-          }}
-          className="text-cyan-400 hover:text-white hover:bg-cyan-500/20 transition-all duration-200"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <Avatar className="h-10 w-10 ring-2 ring-cyan-500/40">
-          <AvatarImage src={friend.picture} />
-          <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white">{friend.name[0]}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <h2 className="text-white font-semibold">{friend.name}</h2>
-          <p className="text-sm text-cyan-300/90">
-            {friend.favorite_anime.length > 0
-              ? `Likes: ${friend.favorite_anime.slice(0, 2).join(', ')}`
-              : 'Anime fan'
-            }
-          </p>
-        </div>
-        <div className="relative z-50" ref={dropdownRef}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="text-cyan-400 hover:text-white hover:bg-cyan-500/20 transition-all duration-200"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-          
-          {showDropdown && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a2e] border border-cyan-500/50 rounded-lg shadow-2xl z-[99999]" style={{ position: 'absolute', zIndex: 99999 }}>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleViewProfile();
-                }}
-                className="w-full px-4 py-3 text-left text-sm text-white hover:bg-cyan-500/20 hover:text-cyan-300 transition-colors flex items-center gap-2 border-b border-gray-700/50"
-              >
-                <User className="h-4 w-4" />
-                View Profile
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleDeleteChatHistory();
-                }}
-                className="w-full px-4 py-3 text-left text-sm text-white hover:bg-cyan-500/20 hover:text-cyan-300 transition-colors flex items-center gap-2 border-b border-gray-700/50"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Chat History
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleUnfriend();
-                }}
-                className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors flex items-center gap-2"
-              >
-                <UserMinus className="h-4 w-4" />
-                Unfriend
-              </button>
+      {/* Header */}
+      <div className="flex-shrink-0 bg-[#212d3d]/80 backdrop-blur-sm border-b border-gray-800/50 px-3 sm:px-4 py-3 relative z-10">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              onClick={() => {
+                cleanup();
+                navigate('/chat');
+              }}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-1.5 sm:p-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-white font-medium text-sm sm:text-base">
+              # {friend.name.toLowerCase().replace(/\s+/g, '-')}
             </div>
-          )}
+          </div>
+          <div className="flex gap-1 sm:gap-2">
+            <Button
+              onClick={handleViewProfile}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-1.5 sm:p-2"
+            >
+              <User className="h-4 w-4" />
+            </Button>
+            <div className="relative" ref={dropdownRef} style={{ zIndex: 999999 }}>
+              <Button
+                ref={dropdownButtonRef}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (!showDropdown && dropdownButtonRef.current) {
+                    const rect = dropdownButtonRef.current.getBoundingClientRect();
+                    setDropdownPosition({
+                      top: rect.bottom + 8,
+                      right: window.innerWidth - rect.right
+                    });
+                  }
+                  setShowDropdown(!showDropdown);
+                }}
+                className="text-gray-400 hover:text-white p-1.5 sm:p-2"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+              
+              {showDropdown && createPortal(
+                <div
+                  ref={dropdownRef}
+                  className="w-48 bg-[#1a1a2e] border border-cyan-500/50 rounded-lg shadow-2xl"
+                  style={{
+                    position: 'fixed',
+                    top: dropdownPosition.top,
+                    right: dropdownPosition.right,
+                    zIndex: 999999,
+                    pointerEvents: 'auto'
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteChatHistory();
+                    }}
+                    className="w-full px-4 py-3 text-left text-sm text-white hover:bg-cyan-500/20 hover:text-cyan-300 flex items-center gap-2 border-b border-gray-700/50 cursor-pointer"
+                    style={{
+                      pointerEvents: 'auto',
+                      transform: 'none !important',
+                      transition: 'background-color 0.2s, color 0.2s'
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Chat History
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleUnfriend();
+                    }}
+                    className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-2 cursor-pointer"
+                    style={{
+                      pointerEvents: 'auto',
+                      transform: 'none !important',
+                      transition: 'background-color 0.2s, color 0.2s'
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <UserMinus className="h-4 w-4" />
+                    Unfriend
+                  </button>
+                </div>,
+                document.body
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-6xl mb-4">👋</div>
-            <h3 className="text-xl font-bold text-white mb-2">Start your conversation!</h3>
-            <p className="text-gray-400">
-              Say hello to {friend.name} and start chatting about your favorite anime!
-            </p>
-          </div>
-        ) : (
-          <>
+      
+      <div className="flex-1 overflow-hidden relative z-10">
+        {/* Chat Interface */}
+        <div className="bg-transparent h-full flex flex-col">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-1">
             {messages.map((message, index) => {
               const isFromUser = message.from_user_id === user.id;
-              const showDate = index === 0 || 
-                formatDate(messages[index - 1].timestamp) !== formatDate(message.timestamp);
-
+              const displayUser = isFromUser ? user : friend;
+              const timestamp = formatTime(message.timestamp);
+              
               return (
-                <div key={index}>
-                  {showDate && (
-                    <div className="flex justify-center mb-4">
-                      <div className="bg-gray-700 text-gray-300 text-xs px-3 py-1 rounded-full">
-                        {formatDate(message.timestamp)}
-                      </div>
+                <div key={index} className="flex items-start gap-2 sm:gap-3 px-1 sm:px-2 py-1 hover:bg-[#212d3d]/60 rounded group">
+                  {/* Avatar */}
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-lg flex-shrink-0 mt-1 bg-gradient-to-br from-cyan-500 to-blue-600">
+                    {displayUser.picture ? (
+                      <img src={displayUser.picture} alt={displayUser.name} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      displayUser.name[0]
+                    )}
+                  </div>
+                  
+                  {/* Message Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Username and Timestamp */}
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="font-medium text-white text-xs sm:text-sm">
+                        {displayUser.name}
+                      </span>
+                      <span className="text-xs text-gray-400 hidden sm:inline">
+                        {timestamp}
+                      </span>
                     </div>
-                  )}
-                  <div className={`flex ${isFromUser ? 'justify-end' : 'justify-start'} mb-2`}>
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                      isFromUser 
-                        ? 'bg-cyan-500 text-white' 
-                        : 'bg-gray-700 text-white'
-                    }`}>
-                      <p className="text-sm">{message.message}</p>
-                      <p className={`text-xs mt-1 ${
-                        isFromUser ? 'text-cyan-100' : 'text-gray-400'
-                      }`}>
-                        {formatTime(message.timestamp)}
-                      </p>
+                    
+                    {/* Message Text */}
+                    <div className="text-gray-200 text-sm leading-relaxed">
+                      <p>{message.message}</p>
                     </div>
                   </div>
                 </div>
               );
             })}
+            
             <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
+          </div>
 
-      {/* Message Input */}
-      <div className="bg-gradient-to-r from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-md border-t border-cyan-500/30 p-4 relative z-10 shadow-lg">
-        <div className="flex gap-3">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={`Message ${friend.name}...`}
-            className="flex-1 bg-[#0f1419]/70 backdrop-blur-sm border-cyan-500/40 text-white placeholder-cyan-300/60 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200"
-          />
-          <Button
-            onClick={sendMessage}
-            disabled={!newMessage.trim()}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg hover:shadow-cyan-500/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          {/* Message Input */}
+          <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+            <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3">
+              <div className="flex-1">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={`Message ${friend.name}...`}
+                  className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto text-sm sm:text-base"
+                />
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="text-gray-400 text-xs sm:text-sm cursor-pointer hover:text-white hidden sm:block">GIF</div>
+                <div className="text-gray-400 text-sm cursor-pointer hover:text-white">😊</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

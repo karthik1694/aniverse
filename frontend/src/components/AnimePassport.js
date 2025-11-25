@@ -182,7 +182,7 @@ ${shareCard.top_anime.length > 0 ? `Top Anime:\n${shareCard.top_anime.map((anime
 
 ${shareCard.favorite_character ? `Favorite Character: ${shareCard.favorite_character.name} from ${shareCard.favorite_character.anime}` : ''}
 
-Join me on AniChat.gg! 🌟`;
+Join me on otakucafe.fun! 🌟`;
 
     navigator.clipboard.writeText(shareText);
     toast.success('Share card copied to clipboard!');
@@ -607,7 +607,7 @@ const PassportJourney = ({ journey }) => {
             <Sparkles className="h-5 w-5 text-cyan-400" />
           </div>
           <div>
-            <h4 className="font-semibold text-white">Joined AniChat</h4>
+            <h4 className="font-semibold text-white">Joined OtakuCafe</h4>
             <p className="text-sm text-gray-400">
               {new Date(journey.joined_date).toLocaleDateString()}
             </p>

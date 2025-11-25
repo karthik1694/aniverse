@@ -6,7 +6,10 @@ import LandingPage from "./pages/LandingPage";
 import ProfileSetup from "./pages/ProfileSetup";
 import ChatPage from "./pages/ChatPage";
 import DirectChat from "./pages/DirectChat";
+import ProfilePage from "./pages/ProfilePage";
 import MainLayout from "./components/MainLayout";
+import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
+import GenderSelectionModal from "./components/GenderSelectionModal";
 import { Toaster } from "./components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,6 +23,7 @@ export const axiosInstance = axios.create({
 function AuthWrapper() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showGenderModal, setShowGenderModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -50,20 +54,26 @@ function AuthWrapper() {
           
           console.log('Authentication successful!');
           console.log('User data:', response.data.user);
-          setUser(response.data.user);
+          const userData = response.data.user;
+          setUser(userData);
           
-          // Clean URL and navigate
-          console.log('Cleaning URL and redirecting to chat...');
+          // Clean URL
           window.history.replaceState({}, document.title, '/chat');
           
           // Set loading to false after user is set
           setLoading(false);
           
-          // Use setTimeout to ensure state updates are processed
-          setTimeout(() => {
-            console.log('Navigating to chat...');
-            navigate('/chat', { replace: true });
-          }, 100);
+          // Check if this is a first-time user (no gender set)
+          if (!userData.gender) {
+            console.log('First-time user detected, showing gender modal...');
+            setShowGenderModal(true);
+          } else {
+            // Use setTimeout to ensure state updates are processed
+            setTimeout(() => {
+              console.log('Navigating to chat...');
+              navigate('/chat', { replace: true });
+            }, 100);
+          }
           return;
         } catch (authError) {
           console.error('Authentication failed:', authError);
@@ -93,15 +103,47 @@ function AuthWrapper() {
     }
   };
 
+  const handleGenderSelect = async (gender) => {
+    try {
+      console.log('Updating user gender:', gender);
+      // Update user profile with selected gender
+      const response = await axiosInstance.put('/profile', {
+        ...user,
+        gender: gender
+      });
+      
+      const updatedUser = response.data;
+      setUser(updatedUser);
+      setShowGenderModal(false);
+      
+      console.log('Gender updated successfully, navigating to chat...');
+      setTimeout(() => {
+        navigate('/chat', { replace: true });
+      }, 100);
+    } catch (error) {
+      console.error('Error updating gender:', error);
+      // Still close modal and navigate on error to prevent blocking
+      setShowGenderModal(false);
+      setTimeout(() => {
+        navigate('/chat', { replace: true });
+      }, 100);
+    }
+  };
+
+  const handleCloseGenderModal = () => {
+    setShowGenderModal(false);
+    // Navigate to chat even if user closes without selecting
+    setTimeout(() => {
+      navigate('/chat', { replace: true });
+    }, 100);
+  };
+
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
+    return <AnimeLoadingScreen />;
   }
 
   return (
+    <>
     <Routes>
       <Route path="/" element={user ? <Navigate to="/chat" /> : <LandingPage />} />
       <Route
@@ -132,7 +174,27 @@ function AuthWrapper() {
           )
         }
       />
-    </Routes>
+      <Route
+        path="/profile/:friendId"
+        element={
+          user ? (
+            <MainLayout user={user} setUser={setUser}>
+              <ProfilePage user={user} />
+            </MainLayout>
+          ) : (
+            <Navigate to="/" />
+          )
+        }
+      />
+      </Routes>
+      
+      {/* Gender Selection Modal for first-time users */}
+      <GenderSelectionModal
+        isOpen={showGenderModal}
+        onClose={handleCloseGenderModal}
+        onGenderSelect={handleGenderSelect}
+      />
+    </>
   );
 }
 

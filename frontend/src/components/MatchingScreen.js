@@ -138,12 +138,12 @@ const MatchingScreen = ({
     if (!matching) return null;
     
     return (
-      <div className="flex justify-center gap-4 mb-6">
-        <Badge className="bg-cyan-500/20 text-cyan-300 px-3 py-1">
+      <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <Badge className="bg-cyan-500/20 text-cyan-300 px-2 sm:px-3 py-1 text-xs sm:text-sm">
           <Users className="h-3 w-3 mr-1" />
           {matchingStats.activeMatchers || Math.floor(Math.random() * 50) + 20} searching
         </Badge>
-        <Badge className="bg-green-500/20 text-green-300 px-3 py-1">
+        <Badge className="bg-green-500/20 text-green-300 px-2 sm:px-3 py-1 text-xs sm:text-sm">
           <Heart className="h-3 w-3 mr-1" />
           {Math.floor(Math.random() * 100) + 500} matches today
         </Badge>
@@ -166,7 +166,7 @@ const MatchingScreen = ({
 
   const renderConnectionStatus = () => {
     return (
-      <div className={`flex items-center justify-center gap-2 mb-6 text-sm ${
+      <div className={`flex items-center justify-center gap-2 mb-4 sm:mb-6 text-xs sm:text-sm ${
         socketConnected ? 'text-green-400' : 'text-yellow-400'
       }`}>
         <div className={`w-2 h-2 rounded-full ${
@@ -174,12 +174,12 @@ const MatchingScreen = ({
         }`}></div>
         {socketConnected ? (
           <>
-            <Wifi className="h-4 w-4" />
+            <Wifi className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>Connected to server</span>
           </>
         ) : (
           <>
-            <WifiOff className="h-4 w-4" />
+            <WifiOff className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>
               {connectionAttempts > 0 ? `Reconnecting... (${connectionAttempts})` : 'Connecting...'}
             </span>
@@ -203,8 +203,8 @@ const MatchingScreen = ({
     const currentTip = tips[searchPhase % tips.length];
     
     return (
-      <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg">
-        <p className="text-sm text-gray-300 text-center italic">
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg">
+        <p className="text-xs sm:text-sm text-gray-300 text-center italic">
           {currentTip}
         </p>
       </div>
@@ -212,7 +212,7 @@ const MatchingScreen = ({
   };
 
   return (
-    <div className="h-full flex items-center justify-center p-6 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] relative overflow-hidden">
+    <div className="h-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Floating Particles */}
@@ -290,14 +290,14 @@ const MatchingScreen = ({
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-cyan-500/5 via-transparent to-transparent rounded-full blur-3xl"></div>
       </div>
       
-      <Card className="bg-[#212d3d]/80 backdrop-blur-sm border-gray-800/50 p-8 text-center max-w-lg w-full relative z-10" data-testid="matching-screen">
+      <Card className="bg-[#212d3d]/80 backdrop-blur-sm border-gray-800/50 p-6 sm:p-8 text-center max-w-lg w-full relative z-10 mx-4" data-testid="matching-screen">
         {renderLoadingAnimation()}
         
-        <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
           {matching ? 'Finding Your Senpai' : 'Ready to Connect?'}
         </h2>
         
-        <p className="text-gray-300 mb-4 text-base leading-relaxed">
+        <p className="text-gray-300 mb-4 text-sm sm:text-base leading-relaxed px-2">
           {matching ? searchText : 'Join thousands of anime fans and find your perfect match'}
         </p>
         
@@ -307,31 +307,31 @@ const MatchingScreen = ({
         
         {!matching ? (
           <div className="space-y-4">
-            <div className="flex flex-wrap justify-center gap-2 mb-6">
-              <Badge className="bg-blue-500/20 text-blue-300">
+            <div className="flex flex-wrap justify-center gap-2 mb-4 sm:mb-6">
+              <Badge className="bg-blue-500/20 text-blue-300 text-xs sm:text-sm px-2 py-1">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Smart Matching
               </Badge>
-              <Badge className="bg-green-500/20 text-green-300">
+              <Badge className="bg-green-500/20 text-green-300 text-xs sm:text-sm px-2 py-1">
                 <Star className="h-3 w-3 mr-1" />
                 Safe Community
               </Badge>
-              <Badge className="bg-purple-500/20 text-purple-300">
+              <Badge className="bg-purple-500/20 text-purple-300 text-xs sm:text-sm px-2 py-1">
                 <Heart className="h-3 w-3 mr-1" />
                 Anime Lovers
               </Badge>
             </div>
             
-            <Button 
+            <Button
               onClick={onStartMatching}
               disabled={!socketConnected}
               size="lg"
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 sm:px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base"
               data-testid="begin-matching-btn"
             >
               {socketConnected ? (
                 <>
-                  <Sparkles className="h-5 w-5 mr-2" />
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                   Start Matching
                 </>
               ) : (
@@ -343,10 +343,10 @@ const MatchingScreen = ({
         ) : (
           <div className="space-y-4">
             <div className="flex justify-center">
-              <Button 
+              <Button
                 onClick={onCancel}
                 variant="outline"
-                className="px-8 py-2 border-red-500/50 hover:bg-red-500/10 text-red-300 hover:text-red-200"
+                className="px-6 sm:px-8 py-2 border-red-500/50 hover:bg-red-500/10 text-red-300 hover:text-red-200 text-sm sm:text-base"
                 data-testid="cancel-matching-btn"
               >
                 Cancel Search

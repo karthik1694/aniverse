@@ -110,7 +110,7 @@ export default function Dashboard({ user, setUser }) {
                           </Avatar>
                           <div>
                             <p className="font-semibold text-white text-sm">{from_user.name}</p>
-                            <p className="text-sm text-gray-400">{from_user.email}</p>
+                            <p className="text-sm text-gray-400">Wants to be friends</p>
                           </div>
                         </div>
                         <Button

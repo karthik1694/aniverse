@@ -10,7 +10,16 @@ A social platform for anime fans to connect, chat, and share their passion for a
 - **Anime Passport**: Track your anime journey with badges and levels
 - **User Profiles**: Customize your profile with favorite anime, genres, and characters
 
-## Quick Start
+## Deployment
+
+This project is configured for cloud deployment:
+
+- **Frontend**: Deployed on [Vercel](https://vercel.com)
+- **Backend**: Deployed on [Render](https://render.com)
+
+For deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+
+## Local Development
 
 ### Prerequisites
 
@@ -20,18 +29,29 @@ A social platform for anime fans to connect, chat, and share their passion for a
 
 ### Backend Setup
 
-1. Install Python dependencies:
+1. Navigate to the backend directory:
 ```bash
-pip install -r backend/requirements.txt
+cd backend
 ```
 
-2. Set up environment variables in `backend/.env`:
+2. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Set up environment variables in `backend/.env`:
 ```
 MONGO_URL=your_mongodb_connection_string
 DB_NAME=chatapp
+CORS_ORIGINS=http://localhost:3000
 ```
 
-3. Start the backend server:
+4. Start the backend server:
+```bash
+python main.py
+```
+
+Or use the convenience script:
 ```bash
 python start_backend.py
 ```
@@ -40,18 +60,23 @@ The backend will be available at `http://localhost:8000`
 
 ### Frontend Setup
 
-1. Install Node.js dependencies:
+1. Navigate to the frontend directory:
 ```bash
 cd frontend
+```
+
+2. Install Node.js dependencies:
+```bash
 npm install
 ```
 
-2. Set up environment variables in `frontend/.env`:
+3. Set up environment variables in `frontend/.env.local`:
 ```
-REACT_APP_BACKEND_URL=http://localhost:8000
+REACT_APP_API_URL=http://localhost:8000
+REACT_APP_SOCKET_URL=http://localhost:8000
 ```
 
-3. Start the frontend development server:
+4. Start the frontend development server:
 ```bash
 npm start
 ```
