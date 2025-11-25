@@ -13,8 +13,19 @@ services:
         value: https://your-frontend-domain.com,http://localhost:3000
       - key: PORT
         value: 10000
+      - key: PYTHONPATH
+        value: /opt/render/project/src/backend
+      - key: PYTHONUNBUFFERED
+        value: 1
     healthCheckPath: /api/health
     disk:
       name: anime-chat-data
       mountPath: /opt/render/project/src
       sizeGB: 1
+    # Enhanced deployment settings for better MongoDB connectivity
+    plan: starter
+    region: oregon
+    buildFilter:
+      paths:
+      - backend/**
+    autoDeploy: false

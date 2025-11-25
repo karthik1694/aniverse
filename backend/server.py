@@ -24,25 +24,11 @@ from passport_models import (
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection with SSL certificate configuration
-import certifi
-mongo_url = os.environ['MONGO_URL']
+# Import enhanced database connection
+from database_connection import get_database, close_database
 
-# Enhanced SSL configuration for cloud deployment using modern PyMongo parameters
-client = AsyncIOMotorClient(
-    mongo_url,
-    tlsCAFile=certifi.where(),
-    tlsAllowInvalidCertificates=False,
-    tlsAllowInvalidHostnames=False,
-    serverSelectionTimeoutMS=30000,
-    connectTimeoutMS=30000,
-    socketTimeoutMS=30000,
-    maxPoolSize=10,
-    minPoolSize=1,
-    retryWrites=True,
-    w='majority'
-)
-db = client[os.environ['DB_NAME']]
+# Database will be initialized in startup event
+db = None
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -355,10 +341,37 @@ async def cleanup_expired_rooms():
 
 @app.on_event("startup")
 async def startup_event():
-    await init_anime_db()
-    await initialize_passport_system()
-    # Start background cleanup task
-    asyncio.create_task(cleanup_expired_rooms())
+    global db
+    try:
+        # Initialize database connection with enhanced error handling
+        logging.info("🚀 Initializing database connection...")
+        db = await get_database()
+        logging.info("✅ Database connection established successfully")
+        
+        # Initialize application data
+        await init_anime_db()
+        await initialize_passport_system()
+        
+        # Start background cleanup task
+        asyncio.create_task(cleanup_expired_rooms())
+        logging.info("✅ Application startup completed successfully")
+        
+    except Exception as e:
+        logging.error(f"❌ Application startup failed: {e}")
+        logging.error(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        logging.error(f"❌ Full traceback:\n{traceback.format_exc()}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean shutdown of database connections."""
+    try:
+        logging.info("🔌 Closing database connection...")
+        await close_database()
+        logging.info("✅ Database connection closed successfully")
+    except Exception as e:
+        logging.error(f"❌ Error during shutdown: {e}")
 
 # Calculate compatibility score
 def calculate_compatibility(user1: User, user2: User) -> int:
