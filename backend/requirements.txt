@@ -12,6 +12,8 @@ cachetools==6.2.1
 certifi==2025.10.5
 cffi==2.0.0
 charset-normalizer==3.4.4
+pyopenssl==24.2.1
+urllib3[secure]==2.5.0
 click==8.3.0
 cryptography==46.0.3
 distro==1.9.0

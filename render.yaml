@@ -2,30 +2,29 @@ services:
   - type: web
     name: anime-chat-backend
     env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && python main.py
-    envVars:
-      - key: MONGO_URL
-        sync: false
-      - key: DB_NAME
-        value: chatapp
-      - key: CORS_ORIGINS
-        value: https://your-frontend-domain.com,http://localhost:3000
-      - key: PORT
-        value: 10000
-      - key: PYTHONPATH
-        value: /opt/render/project/src/backend
-      - key: PYTHONUNBUFFERED
-        value: 1
-    healthCheckPath: /api/health
-    disk:
-      name: anime-chat-data
-      mountPath: /opt/render/project/src
-      sizeGB: 1
-    # Enhanced deployment settings for better MongoDB connectivity
-    plan: starter
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && python main.py"
+    plan: free
     region: oregon
-    buildFilter:
-      paths:
-      - backend/**
-    autoDeploy: false
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        fromService:
+          type: web
+          name: anime-chat-backend
+          property: port
+      - key: RENDER
+        value: true
+      - key: RENDER_EXTERNAL_HOSTNAME
+        fromService:
+          type: web
+          name: anime-chat-backend
+          property: host
+    # Environment variables for MongoDB (to be set in Render dashboard)
+    # MONGO_URL - MongoDB Atlas connection string
+    # DB_NAME - Database name (default: chatapp)

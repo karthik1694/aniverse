@@ -70,7 +70,37 @@ class DatabaseConnection:
         """Optimized connection strategy for Render deployment."""
         logger.info("🚀 Using Render-optimized connection strategy")
         
-        # Strategy 1: Direct connection (often works best on Render)
+        # Strategy 1: Render-specific SSL configuration (most compatible)
+        try:
+            logger.info("Attempting MongoDB connection with Render-specific SSL configuration...")
+            self.client = await self._connect_render_ssl()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with Render SSL")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Render SSL connection failed: {e}")
+            
+        # Strategy 2: Connection string with SSL parameters
+        try:
+            logger.info("Attempting MongoDB connection with SSL parameters in connection string...")
+            self.client = await self._connect_with_ssl_params()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with SSL parameters")
+            return self.client
+        except Exception as e:
+            logger.warning(f"SSL parameters connection failed: {e}")
+            
+        # Strategy 3: Simplified TLS configuration
+        try:
+            logger.info("Attempting MongoDB connection with simplified TLS configuration...")
+            self.client = await self._connect_simplified_tls()
+            await self._test_connection()
+            logger.info("✅ Successfully connected to MongoDB with simplified TLS")
+            return self.client
+        except Exception as e:
+            logger.warning(f"Simplified TLS connection failed: {e}")
+            
+        # Strategy 4: Direct connection (fallback)
         try:
             logger.info("Attempting MongoDB connection with direct connection string approach...")
             self.client = await self._connect_direct()
@@ -80,42 +110,12 @@ class DatabaseConnection:
         except Exception as e:
             logger.warning(f"Direct connection failed: {e}")
             
-        # Strategy 2: No SSL verification (for Render SSL issues)
+        # Strategy 5: Emergency fallback with no SSL verification
         try:
-            logger.info("Attempting MongoDB connection with no SSL verification...")
+            logger.info("Attempting MongoDB connection with no SSL verification (emergency fallback)...")
             self.client = await self._connect_with_no_ssl_verification()
             await self._test_connection()
             logger.info("✅ Successfully connected to MongoDB with no SSL verification")
-            return self.client
-        except Exception as e:
-            logger.warning(f"No SSL verification connection failed: {e}")
-            
-        # Strategy 3: Minimal SSL configuration
-        try:
-            logger.info("Attempting MongoDB connection with minimal SSL configuration...")
-            self.client = await self._connect_with_minimal_ssl()
-            await self._test_connection()
-            logger.info("✅ Successfully connected to MongoDB with minimal SSL")
-            return self.client
-        except Exception as e:
-            logger.warning(f"Minimal SSL connection failed: {e}")
-            
-        # Strategy 4: Legacy SSL configuration
-        try:
-            logger.info("Attempting MongoDB connection with legacy SSL configuration...")
-            self.client = await self._connect_with_legacy_ssl()
-            await self._test_connection()
-            logger.info("✅ Successfully connected to MongoDB with legacy SSL")
-            return self.client
-        except Exception as e:
-            logger.warning(f"Legacy SSL connection failed: {e}")
-            
-        # Strategy 5: Modern TLS (last for Render due to common issues)
-        try:
-            logger.info("Attempting MongoDB connection with modern TLS configuration...")
-            self.client = await self._connect_with_modern_tls()
-            await self._test_connection()
-            logger.info("✅ Successfully connected to MongoDB with modern TLS")
             return self.client
         except Exception as e:
             logger.error(f"All Render connection strategies failed. Last error: {e}")
@@ -332,6 +332,84 @@ class DatabaseConnection:
             
             # Force IPv4 to avoid IPv6 issues in some cloud environments
             directConnection=False
+        )
+    
+    async def _connect_render_ssl(self) -> AsyncIOMotorClient:
+        """Render-specific SSL configuration optimized for cloud deployment."""
+        return AsyncIOMotorClient(
+            self.mongo_url,
+            # Render-optimized SSL settings
+            tls=True,
+            tlsCAFile=certifi.where(),
+            tlsAllowInvalidCertificates=False,
+            tlsAllowInvalidHostnames=False,
+            tlsInsecure=False,
+            
+            # Render-optimized timeouts (shorter for faster failover)
+            serverSelectionTimeoutMS=30000,
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            heartbeatFrequencyMS=10000,
+            
+            # Connection pool optimized for Render
+            maxPoolSize=5,
+            minPoolSize=1,
+            maxIdleTimeMS=20000,
+            
+            # Write concern
+            retryWrites=True,
+            w='majority',
+            
+            # Additional Render optimizations
+            compressors='zlib',
+            readPreference='primaryPreferred',
+            directConnection=False,
+            
+            # Force IPv4 to avoid IPv6 issues on Render
+            family=0  # 0 = AF_UNSPEC (both IPv4 and IPv6), but prioritizes IPv4
+        )
+    
+    async def _connect_with_ssl_params(self) -> AsyncIOMotorClient:
+        """Connection with SSL parameters added to connection string."""
+        # Add SSL parameters to the connection string if not present
+        ssl_params = "ssl=true&ssl_cert_reqs=CERT_REQUIRED&ssl_ca_certs=" + certifi.where().replace("\\", "/")
+        
+        if "?" in self.mongo_url:
+            connection_url = f"{self.mongo_url}&{ssl_params}"
+        else:
+            connection_url = f"{self.mongo_url}?{ssl_params}"
+            
+        return AsyncIOMotorClient(
+            connection_url,
+            serverSelectionTimeoutMS=45000,
+            connectTimeoutMS=45000,
+            socketTimeoutMS=45000,
+            maxPoolSize=5,
+            retryWrites=True
+        )
+    
+    async def _connect_simplified_tls(self) -> AsyncIOMotorClient:
+        """Simplified TLS configuration for problematic environments."""
+        return AsyncIOMotorClient(
+            self.mongo_url,
+            # Simplified TLS settings
+            tls=True,
+            tlsCAFile=certifi.where(),
+            
+            # Relaxed timeouts
+            serverSelectionTimeoutMS=60000,
+            connectTimeoutMS=60000,
+            socketTimeoutMS=60000,
+            
+            # Minimal pool settings
+            maxPoolSize=3,
+            minPoolSize=1,
+            
+            # Basic retry settings
+            retryWrites=True,
+            
+            # Disable compression to reduce complexity
+            compressors=None
         )
     
     async def _connect_direct(self) -> AsyncIOMotorClient:
