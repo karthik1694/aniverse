@@ -25,8 +25,8 @@ from passport_models import (
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Import enhanced database connection
-from database_connection import get_database, close_database
+# Import enhanced database connection with network error handling
+from database_connection_fixed import get_database, close_database, is_database_available
 
 # Database will be initialized in startup event
 db = None
@@ -308,6 +308,11 @@ async def cleanup_expired_rooms():
         try:
             await asyncio.sleep(3600)  # Run every hour
             
+            # Skip cleanup if database is not available
+            if db is None:
+                logging.info("Skipping room cleanup - database not available")
+                continue
+            
             now = datetime.now(timezone.utc)
             logging.info("Running expired room cleanup task...")
             
@@ -346,14 +351,29 @@ async def startup_event():
     try:
         # Initialize database connection with enhanced error handling
         logging.info("🚀 Initializing database connection...")
-        db = await get_database()
-        logging.info("✅ Database connection established successfully")
         
-        # Initialize application data
-        await init_anime_db()
-        await initialize_passport_system()
+        # Check if database is available
+        db_available = await is_database_available()
         
-        # Start background cleanup task
+        if db_available:
+            db = await get_database()
+            logging.info("✅ Database connection established successfully")
+            
+            # Initialize application data only if database is available
+            try:
+                await init_anime_db()
+                await initialize_passport_system()
+                logging.info("✅ Application data initialized successfully")
+            except Exception as init_error:
+                logging.warning(f"⚠️ Application data initialization failed: {init_error}")
+                logging.info("🔧 Server will continue with limited functionality")
+        else:
+            logging.warning("⚠️ Database connection not available")
+            logging.info("🔧 Server starting in limited mode - some features may not work")
+            logging.info("💡 This is normal in development when there are network connectivity issues")
+            db = None
+        
+        # Start background cleanup task (will handle db=None gracefully)
         asyncio.create_task(cleanup_expired_rooms())
         logging.info("✅ Application startup completed successfully")
         
@@ -362,7 +382,15 @@ async def startup_event():
         logging.error(f"❌ Error type: {type(e).__name__}")
         import traceback
         logging.error(f"❌ Full traceback:\n{traceback.format_exc()}")
-        raise
+        
+        # In development, allow server to start even with database issues
+        if not os.getenv("RENDER") and not any(os.getenv(indicator) for indicator in ['DYNO', 'VERCEL', 'NETLIFY']):
+            logging.warning("🔧 Development mode: Server will start despite database issues")
+            logging.info("💡 Some features will be disabled until database connectivity is restored")
+            db = None
+        else:
+            # In production, database is required
+            raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
