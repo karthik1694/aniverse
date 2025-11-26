@@ -13,6 +13,7 @@ import socketio
 import asyncio
 import random
 import ssl
+import certifi
 
 # Import passport models
 from passport_models import (
@@ -524,15 +525,18 @@ async def create_session(response: Response, session_id: str):
         
         await db.user_sessions.insert_one(session_dict)
         
-        # Set cookie
+        # Set cookie with proper configuration for cross-origin deployment
+        is_production = os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT")
+        
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
-            samesite="none",
+            secure=is_production,  # Only secure in production (HTTPS)
+            samesite="none" if is_production else "lax",  # None for cross-origin, lax for local
             path="/",
-            max_age=7*24*60*60
+            max_age=7*24*60*60,
+            domain=None  # Let browser handle domain automatically
         )
         
         return {"user": user.dict(), "session_token": session_token}
@@ -3096,12 +3100,26 @@ async def unfriend_user(friend_id: str, request: Request):
 # Include the router in the main app
 app.include_router(api_router)
 
+# CORS Configuration for production deployment
+allowed_origins = [
+    "https://aniverse-kkvz.vercel.app",  # Production Vercel domain
+    "http://localhost:3000",  # Local development
+    "http://127.0.0.1:3000",  # Local development alternative
+]
+
+# Add any additional origins from environment variable
+env_origins = os.environ.get('CORS_ORIGINS', '')
+if env_origins:
+    additional_origins = [origin.strip() for origin in env_origins.split(',') if origin.strip()]
+    allowed_origins.extend(additional_origins)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Configure logging
