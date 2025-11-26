@@ -451,6 +451,16 @@ def calculate_shared_universe(user1: User, user2: User) -> Dict:
 async def root():
     return {"message": "AniChat.gg API"}
 
+# Add root route for the main app (for health checks and deployment verification)
+@app.get("/")
+async def app_root():
+    return {
+        "message": "AniConnect Backend Server",
+        "status": "running",
+        "api_endpoint": "/api",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint for deployment monitoring"""
