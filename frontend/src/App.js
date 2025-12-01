@@ -12,12 +12,20 @@ import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
 import GenderSelectionModal from "./components/GenderSelectionModal";
 import { Toaster } from "./components/ui/sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const API = `${BACKEND_URL}/api`;
+
+console.log('Environment variables:', {
+  REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
+  REACT_APP_API_URL: process.env.REACT_APP_API_URL,
+  BACKEND_URL,
+  API
+});
 
 export const axiosInstance = axios.create({
   baseURL: API,
-  withCredentials: true
+  withCredentials: true,
+  timeout: 10000 // 10 second timeout
 });
 
 function AuthWrapper() {
@@ -28,19 +36,35 @@ function AuthWrapper() {
   const location = useLocation();
 
   useEffect(() => {
-    checkAuth();
+    // Check authentication when component mounts
+    const initAuth = async () => {
+      await checkAuth();
+    };
+    
+    initAuth();
+    
+    // Safety timeout - force loading to finish after 15 seconds
+    const safetyTimeout = setTimeout(() => {
+      console.warn('Safety timeout triggered - forcing loading to finish');
+      setLoading(false);
+    }, 15000);
+    
+    return () => clearTimeout(safetyTimeout);
   }, []);
 
   const checkAuth = async () => {
     try {
       console.log('=== CHECKING AUTH ===');
       console.log('Backend URL:', BACKEND_URL);
+      console.log('API URL:', API);
       console.log('Current URL:', window.location.href);
       console.log('Current hash:', window.location.hash);
       console.log('Current pathname:', window.location.pathname);
+      console.log('All cookies:', document.cookie);
       
       // Check for session_id in URL fragment
       const hash = window.location.hash;
+      console.log('Checking hash for session_id:', hash);
       if (hash.includes('session_id=')) {
         const sessionId = hash.split('session_id=')[1].split('&')[0];
         console.log('Found session_id in URL:', sessionId);
@@ -48,19 +72,47 @@ function AuthWrapper() {
         try {
           // Exchange session_id for session_token
           console.log('Exchanging session_id for session_token...');
-          const response = await axiosInstance.post('/auth/session', null, {
-            params: { session_id: sessionId }
+          console.log('Making POST request to:', `${API}/auth/session`);
+          console.log('Request URL:', `${API}/auth/session?session_id=${sessionId}`);
+          console.log('With params:', { session_id: sessionId });
+          console.log('Axios config:', axiosInstance.defaults);
+          
+          const response = await axiosInstance.post('auth/session', null, {
+            params: { session_id: sessionId },
+            withCredentials: true
           });
           
-          console.log('Authentication successful!');
+          console.log('✅ Authentication successful!');
+          console.log('Response:', response);
+          console.log('Response status:', response.status);
+          console.log('Response headers:', response.headers);
+          console.log('Response data:', response.data);
           console.log('User data:', response.data.user);
+          console.log('Session token received:', response.data.session_token ? 'YES' : 'NO');
+          console.log('Cookies after auth:', document.cookie);
+          
+          if (!response.data.user) {
+            console.error('❌ No user data in response!');
+            setLoading(false);
+            return;
+          }
+          
           const userData = response.data.user;
+          console.log('Setting user state with:', userData);
           setUser(userData);
           
+          // Store session info in localStorage as backup
+          localStorage.setItem('user_id', userData.id);
+          localStorage.setItem('user_email', userData.email);
+          localStorage.setItem('session_token', response.data.session_token);
+          console.log('✅ User stored in state and localStorage');
+          
           // Clean URL
-          window.history.replaceState({}, document.title, '/chat');
+          console.log('Cleaning URL hash...');
+          window.history.replaceState({}, document.title, '/');
           
           // Set loading to false after user is set
+          console.log('Setting loading to false');
           setLoading(false);
           
           // Check if this is a first-time user (no gender set)
@@ -78,6 +130,9 @@ function AuthWrapper() {
         } catch (authError) {
           console.error('Authentication failed:', authError);
           console.error('Auth error details:', authError.response?.data);
+          console.error('Auth error status:', authError.response?.status);
+          console.error('Auth error message:', authError.message);
+          console.error('Auth error config:', authError.config);
           setLoading(false);
           return;
         }
@@ -85,12 +140,15 @@ function AuthWrapper() {
       
       // Check existing session
       console.log('No session_id in URL, checking existing session...');
+      console.log('Cookies before /auth/me:', document.cookie);
       try {
-        const response = await axiosInstance.get('/auth/me');
+        const response = await axiosInstance.get('auth/me');
         console.log('Existing session found:', response.data);
         setUser(response.data);
       } catch (sessionError) {
         console.log('No existing session:', sessionError.message);
+        console.log('Session error response:', sessionError.response?.data);
+        console.log('Session error status:', sessionError.response?.status);
       }
     } catch (error) {
       console.error('General auth error:', error);
@@ -107,7 +165,7 @@ function AuthWrapper() {
     try {
       console.log('Updating user gender:', gender);
       // Update user profile with selected gender
-      const response = await axiosInstance.put('/profile', {
+      const response = await axiosInstance.put('profile', {
         ...user,
         gender: gender
       });

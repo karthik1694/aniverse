@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
 import { ArrowLeft, MessageCircle, UserMinus, UserPlus, Heart, Star, Calendar } from 'lucide-react';
 import { io } from 'socket.io-client';
+import UserAvatar from '../components/UserAvatar';
 
 export default function ProfilePage({ user }) {
   const { friendId } = useParams();
@@ -68,7 +68,7 @@ export default function ProfilePage({ user }) {
   const loadProfile = async () => {
     try {
       // Try to get from friends list first
-      const friendsResponse = await axiosInstance.get('/friends');
+      const friendsResponse = await axiosInstance.get('friends');
       const friends = friendsResponse.data;
       const friendProfile = friends.find(f => f.id === friendId);
       
@@ -174,12 +174,7 @@ export default function ProfilePage({ user }) {
             <CardContent className="p-6">
               <div className="flex items-center gap-6">
                 <div className="relative">
-                  <Avatar className="h-24 w-24 ring-4 ring-cyan-500/40">
-                    <AvatarImage src={profile.picture} />
-                    <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-2xl">
-                      {profile.name[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar user={profile} size="2xl" className="ring-4 ring-cyan-500/40" />
                   {/* Online status indicator - consistent based on user ID */}
                   {isUserOnline(profile.id) ? (
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-[#0f1419] rounded-full"></div>

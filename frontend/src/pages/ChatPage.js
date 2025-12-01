@@ -4,7 +4,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
@@ -12,6 +11,7 @@ import { Send, UserPlus, X, ArrowLeft, Loader2 } from 'lucide-react';
 import ArcProgressionNotification from '../components/ArcProgressionNotification';
 import MatchingScreen from '../components/MatchingScreen';
 import TypingIndicator from '../components/TypingIndicator';
+import UserAvatar from '../components/UserAvatar';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 

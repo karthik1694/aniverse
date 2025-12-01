@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
@@ -9,6 +8,7 @@ import { MessageCircle, Users, Plus, Settings, LogOut, Crown, Menu } from 'lucid
 import UserArc from './UserArc';
 import PremiumUpgrade from './PremiumUpgrade';
 import ArcProgressionNotification from './ArcProgressionNotification';
+import UserAvatar from './UserAvatar';
 import io from 'socket.io-client';
 
 export default function MainLayout({ user, setUser, children }) {
@@ -130,7 +130,7 @@ export default function MainLayout({ user, setUser, children }) {
 
   const loadFriends = async () => {
     try {
-      const response = await axiosInstance.get('/friends');
+      const response = await axiosInstance.get('friends');
       setFriends(response.data);
     } catch (error) {
       console.error('Error loading friends:', error);
@@ -139,7 +139,7 @@ export default function MainLayout({ user, setUser, children }) {
 
   const loadFriendRequests = async () => {
     try {
-      const response = await axiosInstance.get('/friend-requests');
+      const response = await axiosInstance.get('friend-requests');
       setFriendRequests(response.data);
     } catch (error) {
       console.error('Error loading friend requests:', error);
@@ -151,19 +151,19 @@ export default function MainLayout({ user, setUser, children }) {
       console.log('Loading direct messages...');
       
       // Get friends and their latest messages
-      const friendsResponse = await axiosInstance.get('/friends');
+      const friendsResponse = await axiosInstance.get('friends');
       const friendsList = friendsResponse.data;
       console.log('Friends list:', friendsList);
       
       // Get unread counts for all friends
-      const unreadCountsResponse = await axiosInstance.get('/unread-counts');
+      const unreadCountsResponse = await axiosInstance.get('unread-counts');
       const unreadCounts = unreadCountsResponse.data;
       console.log('Unread counts:', unreadCounts);
       
       const conversations = [];
       for (const friend of friendsList) {
         try {
-          const messagesResponse = await axiosInstance.get(`/direct-messages/${friend.id}`);
+          const messagesResponse = await axiosInstance.get(`direct-messages/${friend.id}`);
           const messagesData = messagesResponse.data;
           const messages = messagesData.messages || messagesData;
           
@@ -201,7 +201,7 @@ export default function MainLayout({ user, setUser, children }) {
     
     // Mark messages as read when opening chat
     try {
-      await axiosInstance.post(`/mark-messages-read/${friend.id}`);
+      await axiosInstance.post(`mark-messages-read/${friend.id}`);
       // Refresh direct messages to update unread counts
       if (activeTab === 'chat') {
         loadDirectMessages();
@@ -216,7 +216,7 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      await axiosInstance.post(`/friend-requests/${requestId}/accept`);
+      await axiosInstance.post(`friend-requests/${requestId}/accept`);
       toast.success('Friend request accepted!');
       loadFriends();
       loadFriendRequests();
@@ -227,7 +227,7 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleRejectRequest = async (requestId) => {
     try {
-      await axiosInstance.post(`/friend-requests/${requestId}/reject`);
+      await axiosInstance.post(`friend-requests/${requestId}/reject`);
       toast.success('Friend request rejected');
       loadFriendRequests();
     } catch (error) {
@@ -237,7 +237,7 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleLogout = async () => {
     try {
-      await axiosInstance.post('/auth/logout');
+      await axiosInstance.post('auth/logout');
       setUser(null);
       navigate('/');
     } catch (error) {
@@ -357,10 +357,7 @@ export default function MainLayout({ user, setUser, children }) {
                           {friendRequests.map(({ request, from_user }) => (
                             <div key={request.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={from_user.picture} />
-                                  <AvatarFallback className="text-xs">{from_user.name[0]}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar user={from_user} size="sm" />
                                 <div>
                                   <p className="font-semibold text-white text-xs">{from_user.name}</p>
                                 </div>
@@ -405,10 +402,7 @@ export default function MainLayout({ user, setUser, children }) {
                             >
                               <div className="flex items-center gap-2">
                                 <div className="relative">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={friend.picture} />
-                                    <AvatarFallback className="text-xs">{friend.name[0]}</AvatarFallback>
-                                  </Avatar>
+                                  <UserAvatar user={friend} size="sm" />
                                   {isUserOnline(friend.id) ? (
                                     <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
                                   ) : (
@@ -458,10 +452,7 @@ export default function MainLayout({ user, setUser, children }) {
                           >
                             <div className="flex items-center gap-2">
                               <div className="relative">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={conversation.friend.picture} />
-                                  <AvatarFallback className="text-xs">{conversation.friend.name[0]}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar user={conversation.friend} size="sm" />
                                 {isUserOnline(conversation.friend.id) ? (
                                   <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
                                 ) : (
@@ -547,12 +538,7 @@ export default function MainLayout({ user, setUser, children }) {
             <div className="p-3 border-t border-gray-800/50 bg-[#0f1419]/80 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <Avatar className="h-10 w-10 border-2 border-white/10">
-                    <AvatarImage src={user.picture} />
-                    <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600">
-                      {user.name[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar user={user} size="md" />
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0f1419] rounded-full"></div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -652,10 +638,7 @@ export default function MainLayout({ user, setUser, children }) {
                       {friendRequests.map(({ request, from_user }) => (
                         <div key={request.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={from_user.picture} />
-                              <AvatarFallback className="text-xs">{from_user.name[0]}</AvatarFallback>
-                            </Avatar>
+                            <UserAvatar user={from_user} size="sm" />
                             <div>
                               <p className="font-semibold text-white text-xs">{from_user.name}</p>
                             </div>
@@ -697,10 +680,7 @@ export default function MainLayout({ user, setUser, children }) {
                         >
                           <div className="flex items-center gap-2">
                             <div className="relative">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={friend.picture} />
-                                <AvatarFallback className="text-xs">{friend.name[0]}</AvatarFallback>
-                              </Avatar>
+                              <UserAvatar user={friend} size="sm" />
                               {/* Online status indicator - consistent based on user ID */}
                               {isUserOnline(friend.id) ? (
                                 <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
@@ -748,10 +728,7 @@ export default function MainLayout({ user, setUser, children }) {
                       >
                         <div className="flex items-center gap-2">
                           <div className="relative">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={conversation.friend.picture} />
-                              <AvatarFallback className="text-xs">{conversation.friend.name[0]}</AvatarFallback>
-                            </Avatar>
+                            <UserAvatar user={conversation.friend} size="sm" />
                             {/* Online status indicator - consistent based on user ID */}
                             {isUserOnline(conversation.friend.id) ? (
                               <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#0f1419] rounded-full"></div>
@@ -835,12 +812,7 @@ export default function MainLayout({ user, setUser, children }) {
         <div className="p-3 border-t border-gray-800/50 bg-[#0f1419]/80 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Avatar className="h-10 w-10 border-2 border-white/10">
-                <AvatarImage src={user.picture} />
-                <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600">
-                  {user.name[0]}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar user={user} size="md" />
               {/* Current user is always online */}
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0f1419] rounded-full"></div>
             </div>

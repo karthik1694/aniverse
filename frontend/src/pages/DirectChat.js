@@ -3,11 +3,11 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
 import { ArrowLeft, Send, MoreVertical, Trash2, UserMinus, User } from 'lucide-react';
 import io from 'socket.io-client';
+import UserAvatar from '../components/UserAvatar';
 
 export default function DirectChat({ user }) {
   const { friendId } = useParams();
@@ -121,7 +121,7 @@ export default function DirectChat({ user }) {
 
   const loadFriend = async () => {
     try {
-      const response = await axiosInstance.get('/friends');
+      const response = await axiosInstance.get('friends');
       const friends = response.data;
       const friendData = friends.find(f => f.id === friendId);
       if (friendData) {

@@ -42,7 +42,7 @@ export default function ProfileSetup({ user, setUser }) {
 
   const loadAnime = async () => {
     try {
-      const response = await axiosInstance.get('/anime');
+      const response = await axiosInstance.get('anime');
       setAnimeList(response.data);
     } catch (error) {
       console.error('Error loading anime:', error);
@@ -126,7 +126,7 @@ export default function ProfileSetup({ user, setUser }) {
     setLoading(true);
 
     try {
-      const response = await axiosInstance.put('/profile', profile);
+      const response = await axiosInstance.put('profile', profile);
       setUser(response.data);
       toast.success('Profile updated successfully!');
       navigate('/chat');

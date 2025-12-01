@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
 import { LogOut, User, Edit, Users, MessageCircle } from 'lucide-react';
 import UserArc from '../components/UserArc';
+import UserAvatar from '../components/UserAvatar';
 
 export default function Dashboard({ user, setUser }) {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export default function Dashboard({ user, setUser }) {
 
   const loadFriends = async () => {
     try {
-      const response = await axiosInstance.get('/friends');
+      const response = await axiosInstance.get('friends');
       setFriends(response.data);
     } catch (error) {
       console.error('Error loading friends:', error);
@@ -30,7 +30,7 @@ export default function Dashboard({ user, setUser }) {
 
   const loadFriendRequests = async () => {
     try {
-      const response = await axiosInstance.get('/friend-requests');
+      const response = await axiosInstance.get('friend-requests');
       setFriendRequests(response.data);
     } catch (error) {
       console.error('Error loading friend requests:', error);
@@ -39,7 +39,7 @@ export default function Dashboard({ user, setUser }) {
 
   const handleLogout = async () => {
     try {
-      await axiosInstance.post('/auth/logout');
+      await axiosInstance.post('auth/logout');
       setUser(null);
       navigate('/');
     } catch (error) {
@@ -104,10 +104,7 @@ export default function Dashboard({ user, setUser }) {
                     {friendRequests.map(({ request, from_user }) => (
                       <div key={request.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors border border-white/5">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border-2 border-white/10">
-                            <AvatarImage src={from_user.picture} />
-                            <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-sm">{from_user.name[0]}</AvatarFallback>
-                          </Avatar>
+                          <UserAvatar user={from_user} size="md" className="border-2 border-white/10" />
                           <div>
                             <p className="font-semibold text-white text-sm">{from_user.name}</p>
                             <p className="text-sm text-gray-400">Wants to be friends</p>

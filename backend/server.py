@@ -31,6 +31,11 @@ from database_connection_fixed import get_database, close_database, is_database_
 # Database will be initialized in startup event
 db = None
 
+# In-memory storage for when database is unavailable (development only)
+IN_MEMORY_SESSIONS = {}
+IN_MEMORY_USERS = {}
+IN_MEMORY_MODE = False
+
 # Create the main app without a prefix
 app = FastAPI()
 
@@ -251,31 +256,61 @@ class UserDailyStats(BaseModel):
 async def get_current_user(request: Request) -> Optional[User]:
     # Check cookie first
     session_token = request.cookies.get('session_token')
+    logging.debug(f"Session token from cookie: {session_token[:20] if session_token else 'None'}...")
     
     # Fallback to Authorization header
     if not session_token:
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
             session_token = auth_header.replace('Bearer ', '')
+            logging.debug(f"Session token from header: {session_token[:20]}...")
     
     if not session_token:
+        logging.debug("No session token found in cookies or headers")
         return None
     
-    # Check session in database
-    session = await db.user_sessions.find_one({"session_token": session_token})
-    if not session:
-        return None
+    # Check in-memory sessions first (for development mode)
+    if IN_MEMORY_MODE and session_token in IN_MEMORY_SESSIONS:
+        session = IN_MEMORY_SESSIONS[session_token]
+        # Check expiry
+        if datetime.fromisoformat(session['expires_at']) < datetime.now(timezone.utc):
+            logging.warning(f"In-memory session expired for user: {session['user_id']}")
+            del IN_MEMORY_SESSIONS[session_token]
+            return None
+        
+        # Get user from in-memory store
+        user_data = IN_MEMORY_USERS.get(session['user_id'])
+        if not user_data:
+            logging.warning(f"User not found in memory for session user_id: {session['user_id']}")
+            return None
+        
+        logging.debug(f"User authenticated from memory: {user_data.get('email')}")
+        return User(**user_data)
     
-    # Check expiry
-    if datetime.fromisoformat(session['expires_at']) < datetime.now(timezone.utc):
+    # Try database if available
+    try:
+        # Check session in database
+        session = await db.user_sessions.find_one({"session_token": session_token})
+        if not session:
+            logging.warning(f"Session not found in database for token: {session_token[:20]}...")
+            return None
+        
+        # Check expiry
+        if datetime.fromisoformat(session['expires_at']) < datetime.now(timezone.utc):
+            logging.warning(f"Session expired for user: {session['user_id']}")
+            return None
+        
+        # Get user
+        user_doc = await db.users.find_one({"id": session['user_id']}, {"_id": 0})
+        if not user_doc:
+            logging.warning(f"User not found for session user_id: {session['user_id']}")
+            return None
+        
+        logging.debug(f"User authenticated successfully: {user_doc.get('email')}")
+        return User(**user_doc)
+    except Exception as e:
+        logging.error(f"Error checking session in database: {e}")
         return None
-    
-    # Get user
-    user_doc = await db.users.find_one({"id": session['user_id']}, {"_id": 0})
-    if not user_doc:
-        return None
-    
-    return User(**user_doc)
 
 # Initialize mock anime database
 async def init_anime_db():
@@ -512,6 +547,7 @@ async def health_check():
 @api_router.post("/auth/session")
 async def create_session(response: Response, session_id: str):
     """Exchange session_id for user data and session_token"""
+    global IN_MEMORY_MODE
     try:
         # Call Emergent auth service with SSL certificate verification
         import aiohttp
@@ -532,40 +568,88 @@ async def create_session(response: Response, session_id: str):
                 
                 data = await resp.json()
         
-        # Check if user exists
-        existing_user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
+        logging.info(f"OAuth data received for: {data.get('email')}")
         
-        if not existing_user:
-            # Create new user
-            user = User(
-                email=data["email"],
-                name=data["name"],
-                picture=data.get("picture")
-            )
-            user_dict = user.dict()
-            user_dict['created_at'] = user_dict['created_at'].isoformat()
-            await db.users.insert_one(user_dict)
+        # Check if database is available
+        db_available = False
+        try:
+            if db:
+                await db.command('ping')
+                db_available = True
+                logging.info("Database is available")
+        except Exception as e:
+            logging.warning(f"Database not available, using in-memory mode: {e}")
+            IN_MEMORY_MODE = True
+        
+        # Create or get user
+        if db_available:
+            # Check if user exists in database
+            existing_user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
+            
+            if not existing_user:
+                # Create new user
+                user = User(
+                    email=data["email"],
+                    name=data["name"],
+                    picture=data.get("picture")
+                )
+                user_dict = user.dict()
+                user_dict['created_at'] = user_dict['created_at'].isoformat()
+                await db.users.insert_one(user_dict)
+            else:
+                user = User(**existing_user)
         else:
-            user = User(**existing_user)
+            # Use in-memory storage
+            logging.info("Using in-memory user storage")
+            user_id = None
+            # Check if user exists in memory by email
+            for uid, udata in IN_MEMORY_USERS.items():
+                if udata.get('email') == data["email"]:
+                    user_id = uid
+                    user = User(**udata)
+                    break
+            
+            if not user_id:
+                # Create new user in memory
+                user = User(
+                    email=data["email"],
+                    name=data["name"],
+                    picture=data.get("picture")
+                )
+                user_dict = user.dict()
+                user_dict['created_at'] = user_dict['created_at'].isoformat()
+                IN_MEMORY_USERS[user.id] = user_dict
+                logging.info(f"Created user in memory: {user.email}")
         
         # Create session
         session_token = data["session_token"]
         expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         
-        session_obj = UserSession(
-            user_id=user.id,
-            session_token=session_token,
-            expires_at=expires_at
-        )
-        session_dict = session_obj.dict()
-        session_dict['expires_at'] = session_dict['expires_at'].isoformat()
-        session_dict['created_at'] = session_dict['created_at'].isoformat()
-        
-        await db.user_sessions.insert_one(session_dict)
+        if db_available:
+            session_obj = UserSession(
+                user_id=user.id,
+                session_token=session_token,
+                expires_at=expires_at
+            )
+            session_dict = session_obj.dict()
+            session_dict['expires_at'] = session_dict['expires_at'].isoformat()
+            session_dict['created_at'] = session_dict['created_at'].isoformat()
+            
+            await db.user_sessions.insert_one(session_dict)
+        else:
+            # Store session in memory
+            IN_MEMORY_SESSIONS[session_token] = {
+                'user_id': user.id,
+                'session_token': session_token,
+                'expires_at': expires_at.isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            logging.info(f"Created session in memory for user: {user.email}")
         
         # Set cookie with proper configuration for cross-origin deployment
         is_production = os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT")
         
+        # Set cookie - for local development, use 'lax' but ensure it works
         response.set_cookie(
             key="session_token",
             value=session_token,
@@ -577,6 +661,10 @@ async def create_session(response: Response, session_id: str):
             domain=None  # Let browser handle domain automatically
         )
         
+        logging.info(f"Session created for user {user.email} (ID: {user.id})")
+        logging.info(f"Cookie settings - Production: {is_production}, SameSite: {'none' if is_production else 'lax'}")
+        logging.info(f"Storage mode: {'Database' if db_available else 'In-Memory'}")
+        
         return {"user": user.dict(), "session_token": session_token}
     
     except HTTPException:
@@ -587,9 +675,15 @@ async def create_session(response: Response, session_id: str):
 
 @api_router.get("/auth/me")
 async def get_me(request: Request):
+    logging.info(f"Auth/me called - Cookies: {dict(request.cookies)}")
+    logging.info(f"Auth/me called - Headers: {dict(request.headers)}")
+    
     user = await get_current_user(request)
     if not user:
+        logging.warning("No user found in auth/me endpoint")
         raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    logging.info(f"User authenticated: {user.email}")
     return user.dict()
 
 @api_router.post("/auth/logout")
@@ -3143,6 +3237,12 @@ allowed_origins = [
     "https://aniverse-kkvz.vercel.app",  # Production Vercel domain
     "http://localhost:3000",  # Local development
     "http://127.0.0.1:3000",  # Local development alternative
+    "http://localhost:3001",  # Local development (alt port)
+    "http://localhost:3002",  # Local development (alt port)
+    "http://localhost:3003",  # Local development (alt port)
+    "http://127.0.0.1:3001",  # Local development alternative
+    "http://127.0.0.1:3002",  # Local development alternative
+    "http://127.0.0.1:3003",  # Local development alternative
 ]
 
 # Add any additional origins from environment variable

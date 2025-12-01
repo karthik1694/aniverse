@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Progress } from './ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -34,6 +33,7 @@ import { axiosInstance } from '../App';
 import { toast } from 'sonner';
 import PassportEditor from './PassportEditor';
 import PassportBadges from './PassportBadges';
+import UserAvatar from './UserAvatar';
 
 const ANIME_VIBE_CONFIG = {
   "Sad / Emotional": { 
@@ -108,7 +108,7 @@ const AnimePassport = ({ user }) => {
 
   const loadPassportData = async () => {
     try {
-      const response = await axiosInstance.get('/passport');
+      const response = await axiosInstance.get('passport');
       setPassportData(response.data);
     } catch (error) {
       console.error('Error loading passport:', error);
@@ -145,7 +145,7 @@ const AnimePassport = ({ user }) => {
 
   const generateShareCard = async () => {
     try {
-      const response = await axiosInstance.post('/passport/share');
+      const response = await axiosInstance.post('passport/share');
       setShareCard(response.data);
       setShareDialogOpen(true);
     } catch (error) {

@@ -12,7 +12,7 @@ export default function PremiumUpgrade({ user, setUser, onClose }) {
   const handleUpgrade = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.post('/premium/upgrade', null, {
+      const response = await axiosInstance.post('premium/upgrade', null, {
         params: { plan_type: 'premium' }
       });
       

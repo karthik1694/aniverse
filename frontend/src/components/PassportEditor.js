@@ -5,7 +5,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { 
   Search, 
   Star, 
@@ -21,6 +20,7 @@ import {
 } from 'lucide-react';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
+import UserAvatar from './UserAvatar';
 
 const ANIME_VIBES = {
   "Sad / Emotional": { 
@@ -78,7 +78,7 @@ const PassportEditor = ({ open, onClose, currentPassport, onSave }) => {
 
   const loadAnimeList = async () => {
     try {
-      const response = await axiosInstance.get('/anime');
+      const response = await axiosInstance.get('anime');
       setAnimeList(response.data);
     } catch (error) {
       console.error('Error loading anime list:', error);
@@ -101,7 +101,7 @@ const PassportEditor = ({ open, onClose, currentPassport, onSave }) => {
     }
     
     try {
-      const response = await axiosInstance.get(`/anime?q=${encodeURIComponent(query)}`);
+      const response = await axiosInstance.get(`anime?q=${encodeURIComponent(query)}`);
       setAnimeList(response.data);
     } catch (error) {
       console.error('Error searching anime:', error);
@@ -213,7 +213,7 @@ const PassportEditor = ({ open, onClose, currentPassport, onSave }) => {
         anime_vibe: selectedVibe
       };
 
-      await axiosInstance.put('/passport', passportData);
+      await axiosInstance.put('passport', passportData);
       toast.success('Passport updated successfully!');
       onSave(passportData);
       onClose();
