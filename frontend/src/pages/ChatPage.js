@@ -750,27 +750,37 @@ export default function ChatPage({ user }) {
                     hour12: true
                   });
                   
+                  // Check if this message is from the same user as the previous one
+                  const prevMsg = index > 0 ? messages[index - 1] : null;
+                  const isSameUser = prevMsg && prevMsg.type === msg.type;
+                  
                   return (
-                    <div key={index} className="flex items-start gap-2 sm:gap-3 px-1 sm:px-2 py-1 hover:bg-[#212d3d]/60 rounded group">
-                      {/* Avatar */}
-                      <div
-                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-lg flex-shrink-0 mt-1"
-                        style={{ backgroundColor: displayUser.color }}
-                      >
-                        {displayUser.avatar}
-                      </div>
+                    <div key={index} className="flex items-start gap-3 px-2 hover:bg-[#212d3d]/40 rounded group" style={{ paddingTop: isSameUser ? '2px' : '8px', paddingBottom: '2px' }}>
+                      {/* Avatar - only show for first message in group */}
+                      {!isSameUser ? (
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                          style={{ backgroundColor: displayUser.color }}
+                        >
+                          {displayUser.avatar}
+                        </div>
+                      ) : (
+                        <div className="w-10 flex-shrink-0" /> // Spacer to maintain alignment
+                      )}
                       
                       {/* Message Content */}
                       <div className="flex-1 min-w-0">
-                        {/* Username and Timestamp */}
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="font-medium text-white text-xs sm:text-sm">
-                            {displayUser.name}
-                          </span>
-                          <span className="text-xs text-gray-400 hidden sm:inline">
-                            {timestamp}
-                          </span>
-                        </div>
+                        {/* Username and Timestamp - Only show for first message in group */}
+                        {!isSameUser && (
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <span className="font-semibold text-white text-sm">
+                              {displayUser.name}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {timestamp}
+                            </span>
+                          </div>
+                        )}
                         
                         {/* Message Text */}
                         <div className="text-gray-200 text-sm leading-relaxed">
