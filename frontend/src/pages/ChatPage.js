@@ -7,11 +7,14 @@ import { Badge } from '../components/ui/badge';
 import { axiosInstance } from '../App';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
-import { Send, UserPlus, X, ArrowLeft, Loader2 } from 'lucide-react';
+import { Send, UserPlus, X, ArrowLeft, Loader2, Filter, Flag, Image } from 'lucide-react';
 import ArcProgressionNotification from '../components/ArcProgressionNotification';
 import MatchingScreen from '../components/MatchingScreen';
 import TypingIndicator from '../components/TypingIndicator';
 import UserAvatar from '../components/UserAvatar';
+import SearchFilters from '../components/SearchFilters';
+import EmojiPicker from '../components/EmojiPicker';
+import ReportUserModal from '../components/ReportUserModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -31,6 +34,12 @@ export default function ChatPage({ user }) {
   const [showSkippedNotification, setShowSkippedNotification] = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({});
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Dynamic usernames and avatars
   const currentUser = {
@@ -86,7 +95,11 @@ export default function ChatPage({ user }) {
 
     newSocket.on('error', (error) => {
       console.error('Socket error:', error);
-      toast.error('Socket error occurred');
+      if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error('Socket error occurred');
+      }
     });
 
     newSocket.on('searching', () => {
@@ -106,6 +119,7 @@ export default function ChatPage({ user }) {
     });
 
     newSocket.on('receive_message', (data) => {
+      console.log('Received message:', { hasImage: !!data.image, message: data.message, data });
       setMessages(prev => [...prev, {
         ...data,
         type: 'received',
@@ -114,6 +128,7 @@ export default function ChatPage({ user }) {
     });
 
     newSocket.on('message_sent', (data) => {
+      console.log('Message sent confirmation:', { hasImage: !!data.image, message: data.message, data });
       setMessages(prev => [...prev, {
         ...data,
         type: 'sent',
@@ -193,7 +208,8 @@ export default function ChatPage({ user }) {
       socketConnected, 
       socket_id: socket?.id,
       user_id: user.id,
-      user_name: user.name
+      user_name: user.name,
+      filters: searchFilters
     });
     
     if (!socket) {
@@ -214,12 +230,14 @@ export default function ChatPage({ user }) {
 
     console.log('Emitting join_matching event with data:', {
       user_id: user.id,
-      user_name: user.name
+      user_name: user.name,
+      filters: searchFilters
     });
     
     socket.emit('join_matching', {
       user_id: user.id,
-      user_data: user
+      user_data: user,
+      filters: searchFilters
     });
     
     toast.info('Searching for a match...');
@@ -313,6 +331,71 @@ export default function ChatPage({ user }) {
     }
   };
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImage({
+          file,
+          preview: e.target.result
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSendWithImage = async () => {
+    if (!selectedImage && !messageInput.trim()) return;
+    
+    // Stop typing indicator when sending message
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
+    if (socket && socket.connected) {
+      socket.emit('typing_stop');
+    }
+    
+    try {
+      if (selectedImage) {
+        // Convert image to base64 and send
+        const message = messageInput.trim() || 'Sent an image';
+        console.log('Sending message with image:', { 
+          message, 
+          imageSize: selectedImage.preview.length,
+          imagePreview: selectedImage.preview.substring(0, 100) + '...'
+        });
+        socket.emit('send_message', { 
+          message,
+          image: selectedImage.preview
+        });
+        handleRemoveImage();
+        setMessageInput('');
+      } else {
+        handleSendMessage();
+      }
+    } catch (error) {
+      console.error('Error sending image:', error);
+      toast.error('Failed to send image');
+    }
+  };
+
   const handleSendFriendRequest = async () => {
     if (!partner) return;
     
@@ -362,14 +445,33 @@ export default function ChatPage({ user }) {
 
   if (!matched) {
     return (
-      <MatchingScreen
-        matching={matching}
-        socketConnected={socketConnected}
-        onStartMatching={handleStartMatching}
-        onCancel={handleCancelMatching}
-        onBack={() => navigate('/dashboard')}
-        matchingStats={matchingStats}
-      />
+      <>
+        <MatchingScreen
+          matching={matching}
+          socketConnected={socketConnected}
+          onStartMatching={handleStartMatching}
+          onCancel={handleCancelMatching}
+          onBack={() => navigate('/dashboard')}
+          matchingStats={matchingStats}
+        />
+        
+        {/* Filter Button - Fixed Position */}
+        {!matching && (
+          <button
+            onClick={() => setShowFilters(true)}
+            className="fixed bottom-6 right-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-50"
+            title="Search Filters"
+          >
+            <Filter className="h-6 w-6" />
+          </button>
+        )}
+        
+        <SearchFilters
+          isOpen={showFilters}
+          onClose={() => setShowFilters(false)}
+          onFiltersChange={setSearchFilters}
+        />
+      </>
     );
   }
 
@@ -481,6 +583,15 @@ export default function ChatPage({ user }) {
                 <UserPlus className="h-4 w-4" />
               </Button>
               <Button
+                onClick={() => setShowReportModal(true)}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-red-400 p-1.5 sm:p-2"
+                title="Report User"
+              >
+                <Flag className="h-4 w-4" />
+              </Button>
+              <Button
                 onClick={handleSkipPartner}
                 variant="ghost"
                 size="sm"
@@ -534,48 +645,99 @@ export default function ChatPage({ user }) {
               </div>
             )}
             
-            {/* Match Notification Banner */}
-            <div className="bg-[#212d3d]/80 backdrop-blur-sm px-3 sm:px-4 py-3 border-b border-gray-800/50">
-              {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0) ? (
-                <>
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-orange-400">✨</span>
-                    <span className="text-white font-medium text-sm sm:text-base">You both like</span>
-                    <span className="text-purple-400 font-bold text-sm sm:text-base">
-                      {sharedUniverse.shared_anime?.length > 0
-                        ? sharedUniverse.shared_anime[0]
-                        : sharedUniverse.shared_genres?.[0] || 'anime'
-                      }
-                    </span>
+            {/* Shared Anime Universe Section - Simplified */}
+            {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0 || compatibility > 0) && (
+              <div className="bg-[#1e2936]/60 backdrop-blur-sm px-4 py-3 border-b border-gray-700/50">
+                {/* Header with Compatibility Score */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">✨</span>
+                    <h3 className="text-white font-semibold text-sm">Shared Anime Universe</h3>
                   </div>
-                  <div className="text-gray-300 text-xs sm:text-sm">
-                    You are now chatting with <span className="text-purple-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
-                  </div>
-                </>
-              ) : (
-                <div className="text-gray-300 text-xs sm:text-sm">
-                  You are now chatting with <span className="text-purple-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
+                  {compatibility > 0 && (
+                    <div className="bg-cyan-500/20 px-3 py-1 rounded-full border border-cyan-500/40">
+                      <span className="text-cyan-300 font-semibold text-sm">{compatibility}% Match</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Shared Content - Horizontal Layout */}
+                <div className="flex flex-wrap gap-6">
+                  {/* You both watched */}
+                  {sharedUniverse.shared_anime?.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-orange-400">🔥</span>
+                        <span className="text-orange-300 font-semibold text-xs">You both watched:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {sharedUniverse.shared_anime.slice(0, 3).map((anime, idx) => (
+                          <Badge key={idx} className="bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 text-xs px-3 py-1">
+                            {anime}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Common genres */}
+                  {sharedUniverse.shared_genres?.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-purple-400">⚔️</span>
+                        <span className="text-purple-300 font-semibold text-xs">Common genres:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {sharedUniverse.shared_genres.slice(0, 3).map((genre, idx) => (
+                          <Badge key={idx} className="bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 text-xs px-3 py-1">
+                            {genre}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Partner Name */}
+                <div className="mt-3 text-center">
+                  <span className="text-gray-400 text-xs">You are now chatting with </span>
+                  <span className="text-cyan-400 font-semibold text-xs">{partner?.name || 'your match'}</span>
+                  <span className="text-gray-400 text-xs">. Say hi! 👋</span>
+                </div>
+                
+                {/* Privacy Notice */}
+                <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500">
+                  <span className="text-green-400">🔒</span>
+                  <span>This chat is ephemeral - messages vanish when you skip or leave</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Simple Match Banner (fallback) */}
+            {(!sharedUniverse || (!sharedUniverse.conversation_starters?.length && compatibility === 0)) && (
+              <div className="bg-[#212d3d]/80 backdrop-blur-sm px-3 sm:px-4 py-3 border-b border-gray-800/50">
+                <div className="text-gray-300 text-xs sm:text-sm text-center">
+                  You are now chatting with <span className="text-cyan-400 font-medium">{partner?.name || 'your match'}</span>. Say hi!
+                </div>
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 space-y-1">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-gray-400">
-                    <p className="text-lg mb-2">👋 Start the conversation!</p>
-                    <p className="text-sm">
-                      {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0) ? (
-                        `You both like ${
-                          sharedUniverse.shared_anime?.length > 0
-                            ? sharedUniverse.shared_anime[0]
-                            : sharedUniverse.shared_genres?.[0] || 'anime'
-                        } - that's a great conversation starter!`
-                      ) : (
-                        "You both love anime - that's a great conversation starter!"
-                      )}
-                    </p>
+                  <div className="text-center text-gray-400 max-w-lg px-4">
+                    <p className="text-xl mb-4">👋 Start the conversation!</p>
+                    {sharedUniverse?.conversation_starters?.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-gray-500 mb-4">Try one of these conversation starters:</p>
+                        {sharedUniverse.conversation_starters.map((prompt, idx) => (
+                          <div key={idx} className="bg-[#1e2936]/60 p-4 rounded-lg border border-cyan-500/20 text-left hover:border-cyan-500/40 transition-colors">
+                            <p className="text-sm text-cyan-300 italic">"{prompt}"</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -615,6 +777,14 @@ export default function ChatPage({ user }) {
                           {msg.is_spoiler && (
                             <Badge className="bg-red-500/20 text-red-300 mb-2 text-xs">⚠️ Potential Spoiler</Badge>
                           )}
+                          {msg.image && (
+                            <img 
+                              src={msg.image} 
+                              alt="Shared image" 
+                              className="rounded-lg max-w-xs mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(msg.image, '_blank')}
+                            />
+                          )}
                           <p className={msg.is_spoiler ? 'blur-sm hover:blur-none transition-all cursor-pointer' : ''}>
                             {msg.message}
                           </p>
@@ -636,16 +806,26 @@ export default function ChatPage({ user }) {
 
             {/* Message Input */}
             <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-              <div className="relative">
-                {/* ESC and SKIP buttons - Mobile optimized */}
-                <div className="absolute left-1 sm:left-2 top-1 sm:top-2 flex gap-1 sm:gap-2 z-10">
-                  <Button
-                    onClick={handleLeaveChat}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white text-xs px-2 sm:px-3 py-1 h-auto rounded"
-                    size="sm"
+              {/* Image Preview - Outside of input container */}
+              {selectedImage && (
+                <div className="mb-2 relative inline-block">
+                  <img 
+                    src={selectedImage.preview} 
+                    alt="Preview" 
+                    className="h-20 w-20 object-cover rounded-lg border-2 border-cyan-500/30"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
                   >
-                    ESC
-                  </Button>
+                    ✕
+                  </button>
+                </div>
+              )}
+              
+              <div className="relative">
+                {/* SKIP button only - Mobile optimized */}
+                <div className="absolute left-1 sm:left-2 top-1 sm:top-2 z-10">
                   <Button
                     onClick={handleSkipPartner}
                     className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 sm:px-3 py-1 h-auto rounded"
@@ -655,21 +835,64 @@ export default function ChatPage({ user }) {
                   </Button>
                 </div>
                 
-                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 pl-20 sm:pl-32">
+                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 pl-16 sm:pl-20">
                   <div className="flex-1">
                     <Input
                       value={messageInput}
                       onChange={handleInputChange}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (selectedImage) {
+                            handleSendWithImage();
+                          } else {
+                            handleSendMessage();
+                          }
+                        }
+                      }}
                       placeholder="Send a message"
                       className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto text-sm sm:text-base"
                       data-testid="message-input"
                     />
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="text-gray-400 text-xs sm:text-sm cursor-pointer hover:text-white hidden sm:block">GIF</div>
-                    <div className="text-gray-400 text-sm cursor-pointer hover:text-white">😊</div>
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    {/* Image upload button */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-gray-400 hover:text-white transition-colors"
+                      title="Upload image"
+                    >
+                      <Image className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="text-gray-400 text-sm cursor-pointer hover:text-white transition-colors"
+                    >
+                      😊
+                    </button>
                   </div>
+                  
+                  {/* Emoji Picker - Position relative to input */}
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-full right-0 mb-2">
+                      <EmojiPicker
+                        isOpen={showEmojiPicker}
+                        onClose={() => setShowEmojiPicker(false)}
+                        onEmojiSelect={(emoji) => {
+                          setMessageInput(prev => prev + emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -679,6 +902,13 @@ export default function ChatPage({ user }) {
       
       {/* Arc Progression Notification */}
       <ArcProgressionNotification socket={socket} />
+      
+      {/* Report User Modal */}
+      <ReportUserModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUser={partner}
+      />
     </>
   );
 }

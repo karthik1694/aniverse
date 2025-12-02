@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Send, MoreVertical, Trash2, UserMinus, User } from 'lucide-react';
 import io from 'socket.io-client';
 import UserAvatar from '../components/UserAvatar';
+import EmojiPicker from '../components/EmojiPicker';
 
 export default function DirectChat({ user }) {
   const { friendId } = useParams();
@@ -26,6 +27,7 @@ export default function DirectChat({ user }) {
   const dropdownButtonRef = useRef(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Helper function to check if a user is online based on real-time data
   const isUserOnline = (userId) => {
@@ -589,8 +591,27 @@ export default function DirectChat({ user }) {
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="text-gray-400 text-xs sm:text-sm cursor-pointer hover:text-white hidden sm:block">GIF</div>
-                <div className="text-gray-400 text-sm cursor-pointer hover:text-white">😊</div>
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="text-gray-400 text-sm cursor-pointer hover:text-white transition-colors"
+                >
+                  😊
+                </button>
               </div>
+              
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
+                <div className="absolute bottom-16 right-0 z-50">
+                  <EmojiPicker
+                    isOpen={showEmojiPicker}
+                    onClose={() => setShowEmojiPicker(false)}
+                    onEmojiSelect={(emoji) => {
+                      setNewMessage(prev => prev + emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

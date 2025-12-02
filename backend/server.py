@@ -50,7 +50,8 @@ sio = socketio.AsyncServer(
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
-    ping_interval=25
+    ping_interval=25,
+    max_http_buffer_size=10000000  # 10MB max message size for images
 )
 
 # Mount Socket.IO on /api/socket.io so it goes through the ingress /api route
@@ -183,6 +184,27 @@ class ProfileUpdate(BaseModel):
     favorite_genres: Optional[List[str]] = None
     favorite_themes: Optional[List[str]] = None
     favorite_characters: Optional[List[str]] = None
+
+class UserReport(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    reporter_user_id: str
+    reported_user_id: str
+    reason: str
+    additional_details: Optional[str] = ""
+    status: str = "pending"  # pending, reviewed, actioned, dismissed
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    reviewed_at: Optional[datetime] = None
+    reviewer_notes: Optional[str] = ""
+
+class BlockedUser(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    blocker_user_id: str
+    blocked_user_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 class ArcMilestone(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
@@ -2184,6 +2206,11 @@ async def disconnect(sid):
         del active_users[user_to_remove]
         # Notify all clients that this user went offline
         await sio.emit('user_offline', user_to_remove)
+        
+        # Send updated online users list to everyone
+        online_user_ids = list(active_users.keys())
+        await sio.emit('online_users_update', online_user_ids)
+        logging.info(f"User {user_to_remove} went offline. Broadcasting updated list: {len(online_user_ids)} users online")
     
     # Remove from matching queue
     matching_queue = [u for u in matching_queue if u['sid'] != sid]
@@ -2248,6 +2275,11 @@ async def join_matching(sid, data):
         
         # Notify all clients that this user came online
         await sio.emit('user_online', user_id)
+        
+        # Send updated online users list to everyone (including the new user)
+        online_user_ids = list(active_users.keys())
+        await sio.emit('online_users_update', online_user_ids)
+        logging.info(f"Broadcasting online users list: {len(online_user_ids)} users online")
         
         # Declare global variables at the start
         global matching_queue
@@ -2363,53 +2395,76 @@ async def join_matching(sid, data):
 
 @sio.event
 async def send_message(sid, data):
-    if sid not in active_matches:
-        await sio.emit('error', {'message': 'Not in an active chat'}, room=sid)
-        return
-    
-    match_info = active_matches[sid]
-    partner_sid = match_info['partner_sid']
-    message = data.get('message', '')
-    
-    # Simple spoiler detection (rule-based)
-    spoiler_keywords = ['dies', 'killed', 'death', 'ending', 'finale', 'spoiler']
-    is_spoiler = any(keyword in message.lower() for keyword in spoiler_keywords)
-    
-    message_data = {
-        'message': message,
-        'from': match_info['user_id'],
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'is_spoiler': is_spoiler
-    }
-    
-    # Save message to database
     try:
-        chat_message = ChatMessage(
-            from_user_id=match_info['user_id'],
-            to_user_id=match_info['partner_id'],
-            message=message,
-            is_spoiler=is_spoiler
-        )
-        chat_message_dict = chat_message.dict()
-        chat_message_dict['timestamp'] = chat_message_dict['timestamp'].isoformat()
-        await db.chat_messages.insert_one(chat_message_dict)
+        if sid not in active_matches:
+            await sio.emit('error', {'message': 'Not in an active chat'}, room=sid)
+            return
+        
+        match_info = active_matches[sid]
+        partner_sid = match_info['partner_sid']
+        message = data.get('message', '')
+        image = data.get('image', None)  # Get image data if present
+        
+        # DEBUG: Log received data
+        logging.info(f"Received message from {sid}: message='{message}', has_image={image is not None}")
+        if image:
+            logging.info(f"Image data length: {len(image)} characters")
+        
+        # Validate image size if present
+        if image:
+            # Rough estimate: base64 is ~33% larger than binary
+            image_size = len(image) * 0.75 / (1024 * 1024)  # Size in MB
+            logging.info(f"Image size: {image_size:.2f}MB")
+            if image_size > 5:  # 5MB limit
+                await sio.emit('error', {'message': 'Image too large. Maximum 5MB.'}, room=sid)
+                logging.warning(f"Image too large: {image_size:.2f}MB from user {match_info['user_id']}")
+                return
+        
+        # Simple spoiler detection (rule-based)
+        spoiler_keywords = ['dies', 'killed', 'death', 'ending', 'finale', 'spoiler']
+        is_spoiler = any(keyword in message.lower() for keyword in spoiler_keywords)
+        
+        message_data = {
+            'message': message,
+            'from': match_info['user_id'],
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'is_spoiler': is_spoiler,
+            'image': image  # Include image in message data
+        }
+        
+        # DEBUG: Log message_data being sent
+        logging.info(f"Preparing to send message_data with image={message_data.get('image') is not None}")
+        
+        # PRIVACY: Do NOT save random match messages to database
+        # Only real-time transmission for ephemeral privacy
+        # Messages vanish when users skip/leave - no permanent records
+        logging.info(f"Random match message - NOT saved to database (privacy feature)")
+        
+        # Send to partner
+        try:
+            await sio.emit('receive_message', message_data, room=partner_sid)
+            logging.info(f"Message sent to partner {partner_sid}, has_image: {image is not None}, image_in_data: {message_data.get('image') is not None}")
+        except Exception as e:
+            logging.error(f"Error sending message to partner: {e}")
+            await sio.emit('error', {'message': 'Failed to send message to partner'}, room=sid)
+            return
+        
+        # Echo back to sender
+        await sio.emit('message_sent', message_data, room=sid)
+        logging.info(f"Message echoed back to sender {sid}, has_image: {message_data.get('image') is not None}")
+        
+        # Update passport stats for messages sent
+        try:
+            await update_passport_stats(match_info['user_id'], {"messages_sent": 1})
+        except Exception as e:
+            logging.error(f"Error updating passport stats for message: {e}")
+        
+        # Update arc progression for message sender
+        await update_user_stats(match_info['user_id'], "messages_sent", 1)
+        
     except Exception as e:
-        logging.error(f"Error saving chat message to database: {e}")
-    
-    # Send to partner
-    await sio.emit('receive_message', message_data, room=partner_sid)
-    
-    # Echo back to sender
-    await sio.emit('message_sent', message_data, room=sid)
-    
-    # Update passport stats for messages sent
-    try:
-        await update_passport_stats(match_info['user_id'], {"messages_sent": 1})
-    except Exception as e:
-        logging.error(f"Error updating passport stats for message: {e}")
-    
-    # Update arc progression for message sender
-    await update_user_stats(match_info['user_id'], "messages_sent", 1)
+        logging.error(f"Error in send_message: {e}", exc_info=True)
+        await sio.emit('error', {'message': 'Failed to send message'}, room=sid)
 @sio.event
 async def typing_start(sid, data):
     """Handle when a user starts typing"""
@@ -2999,6 +3054,11 @@ async def register_for_notifications(sid, data):
         # Notify all clients that this user came online
         await sio.emit('user_online', user_id)
         
+        # Send updated online users list to everyone (including the new user)
+        online_user_ids = list(active_users.keys())
+        await sio.emit('online_users_update', online_user_ids)
+        logging.info(f"Broadcasting online users list: {len(online_user_ids)} users online")
+        
         await sio.emit('notification_registration_success', {
             'message': 'Registered for notifications',
             'user_id': user_id
@@ -3229,6 +3289,178 @@ async def unfriend_user(friend_id: str, request: Request):
     friend_name = friend_user.get("name", "Unknown") if friend_user else "Unknown"
     
     return {"message": f"Successfully unfriended {friend_name}"}
+
+# Report & Block Endpoints
+@api_router.post("/reports")
+async def create_report(report_data: dict, request: Request):
+    """Submit a report for a user"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401)
+    
+    reported_user_id = report_data.get('reported_user_id')
+    reason = report_data.get('reason')
+    additional_details = report_data.get('additional_details', '')
+    
+    if not reported_user_id or not reason:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # Check if reported user exists
+    reported_user = await db.users.find_one({"id": reported_user_id})
+    if not reported_user:
+        raise HTTPException(status_code=404, detail="Reported user not found")
+    
+    # Prevent self-reporting
+    if reported_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot report yourself")
+    
+    # Create report
+    report = UserReport(
+        reporter_user_id=user.id,
+        reported_user_id=reported_user_id,
+        reason=reason,
+        additional_details=additional_details
+    )
+    
+    report_dict = report.dict()
+    report_dict['created_at'] = report_dict['created_at'].isoformat()
+    
+    await db.user_reports.insert_one(report_dict)
+    
+    logging.info(f"User {user.id} reported user {reported_user_id} for {reason}")
+    
+    return {"message": "Report submitted successfully", "report_id": report.id}
+
+@api_router.post("/block-user")
+async def block_user(block_data: dict, request: Request):
+    """Block a user from matching and messaging"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401)
+    
+    blocked_user_id = block_data.get('blocked_user_id')
+    
+    if not blocked_user_id:
+        raise HTTPException(status_code=400, detail="Missing blocked_user_id")
+    
+    # Check if blocked user exists
+    blocked_user = await db.users.find_one({"id": blocked_user_id})
+    if not blocked_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent self-blocking
+    if blocked_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot block yourself")
+    
+    # Check if already blocked
+    existing_block = await db.blocked_users.find_one({
+        "blocker_user_id": user.id,
+        "blocked_user_id": blocked_user_id
+    })
+    
+    if existing_block:
+        return {"message": "User already blocked"}
+    
+    # Create block
+    block = BlockedUser(
+        blocker_user_id=user.id,
+        blocked_user_id=blocked_user_id
+    )
+    
+    block_dict = block.dict()
+    block_dict['created_at'] = block_dict['created_at'].isoformat()
+    
+    await db.blocked_users.insert_one(block_dict)
+    
+    # Remove friendship if exists
+    await db.friendships.delete_many({
+        "$or": [
+            {"user1_id": user.id, "user2_id": blocked_user_id},
+            {"user1_id": blocked_user_id, "user2_id": user.id}
+        ]
+    })
+    
+    # Remove pending friend requests
+    await db.friend_requests.delete_many({
+        "$or": [
+            {"from_user_id": user.id, "to_user_id": blocked_user_id},
+            {"from_user_id": blocked_user_id, "to_user_id": user.id}
+        ]
+    })
+    
+    logging.info(f"User {user.id} blocked user {blocked_user_id}")
+    
+    return {"message": "User blocked successfully"}
+
+@api_router.delete("/block-user/{blocked_user_id}")
+async def unblock_user(blocked_user_id: str, request: Request):
+    """Unblock a user"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401)
+    
+    # Remove block
+    result = await db.blocked_users.delete_one({
+        "blocker_user_id": user.id,
+        "blocked_user_id": blocked_user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Block not found")
+    
+    logging.info(f"User {user.id} unblocked user {blocked_user_id}")
+    
+    return {"message": "User unblocked successfully"}
+
+@api_router.get("/blocked-users")
+async def get_blocked_users(request: Request):
+    """Get list of blocked users"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401)
+    
+    # Get all blocks by this user
+    blocks = await db.blocked_users.find({
+        "blocker_user_id": user.id
+    }).to_list(100)
+    
+    blocked_user_ids = [block['blocked_user_id'] for block in blocks]
+    
+    # Get user info for blocked users
+    blocked_users = []
+    for blocked_id in blocked_user_ids:
+        blocked_user = await db.users.find_one(
+            {"id": blocked_id},
+            {"_id": 0, "id": 1, "name": 1, "picture": 1}
+        )
+        if blocked_user:
+            blocked_users.append(blocked_user)
+    
+    return blocked_users
+
+@api_router.get("/check-blocked/{user_id}")
+async def check_if_blocked(user_id: str, request: Request):
+    """Check if a user is blocked"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401)
+    
+    # Check if user is blocked by current user
+    blocked_by_me = await db.blocked_users.find_one({
+        "blocker_user_id": user.id,
+        "blocked_user_id": user_id
+    })
+    
+    # Check if current user is blocked by other user
+    blocked_me = await db.blocked_users.find_one({
+        "blocker_user_id": user_id,
+        "blocked_user_id": user.id
+    })
+    
+    return {
+        "is_blocked": blocked_by_me is not None,
+        "has_blocked_me": blocked_me is not None
+    }
 # Include the router in the main app
 app.include_router(api_router)
 

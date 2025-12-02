@@ -7,6 +7,10 @@ import ProfileSetup from "./pages/ProfileSetup";
 import ChatPage from "./pages/ChatPage";
 import DirectChat from "./pages/DirectChat";
 import ProfilePage from "./pages/ProfilePage";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CommunityGuidelines from "./pages/CommunityGuidelines";
+import RefundPolicy from "./pages/RefundPolicy";
 import MainLayout from "./components/MainLayout";
 import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
 import GenderSelectionModal from "./components/GenderSelectionModal";
@@ -204,6 +208,10 @@ function AuthWrapper() {
     <>
     <Routes>
       <Route path="/" element={user ? <Navigate to="/chat" /> : <LandingPage />} />
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/guidelines" element={<CommunityGuidelines />} />
+      <Route path="/refund" element={<RefundPolicy />} />
       <Route
         path="/profile-setup"
         element={user ? <ProfileSetup user={user} setUser={setUser} /> : <Navigate to="/" />}
