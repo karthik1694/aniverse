@@ -240,15 +240,15 @@ Join me on otakucafe.fun! 🌟`;
   const LevelIcon = levelTheme.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-gray-900 p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-gray-900 p-3 sm:p-4 md:p-6">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
         
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent mb-4">
+        <div className="text-center mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2 sm:mb-4">
             Anime Passport
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-gray-300 max-w-2xl mx-auto px-2">
             Your digital identity in the anime multiverse ✨
           </p>
         </div>
@@ -262,90 +262,90 @@ Join me on otakucafe.fun! 🌟`;
             <div className="absolute bottom-4 left-4 w-24 h-24 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-full blur-2xl"></div>
           </div>
 
-          <CardHeader className="relative z-10 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 border-4 border-gradient-to-r from-cyan-500 to-blue-500">
+          <CardHeader className="relative z-10 pb-3 sm:pb-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Avatar className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 border-4 border-gradient-to-r from-cyan-500 to-blue-500">
                   <AvatarImage src={user.picture} />
-                  <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-xl">
+                  <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-base sm:text-lg md:text-xl">
                     {user.name[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{user.name}</h2>
-                  <p className="text-gray-400">Anime Enthusiast</p>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{user.name}</h2>
+                  <p className="text-xs sm:text-sm text-gray-400">Anime Enthusiast</p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setEditMode(true)}
-                  className="border-purple-500/50 hover:bg-purple-500/20 text-purple-300 hover:text-white"
+                  className="border-purple-500/50 hover:bg-purple-500/20 text-purple-300 hover:text-white text-xs sm:text-sm px-2 sm:px-3 md:px-4"
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Customize
+                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Customize</span>
                 </Button>
                 <Button
                   onClick={generateShareCard}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-xs sm:text-sm px-2 sm:px-3 md:px-4"
                 >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
+                  <Share2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Share</span>
                 </Button>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="relative z-10 space-y-6">
+          <CardContent className="relative z-10 space-y-4 sm:space-y-6">
             {/* Core Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {/* Fate Number */}
               <Card className="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border-cyan-500/30 backdrop-blur-sm">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text mb-2">
+                <CardContent className="p-4 sm:p-5 md:p-6 text-center">
+                  <div className="text-3xl sm:text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text mb-1 sm:mb-2">
                     #{passport.fate_number}
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Fate Number</h3>
-                  <p className="text-sm text-gray-400">Your unique anime signature</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-1">Fate Number</h3>
+                  <p className="text-xs sm:text-sm text-gray-400">Your unique anime signature</p>
                 </CardContent>
               </Card>
 
               {/* Level */}
               <Card className={`bg-gradient-to-br ${levelTheme.color}/20 border-yellow-500/30 backdrop-blur-sm`}>
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <LevelIcon className="h-8 w-8 text-yellow-400" />
-                    <span className="text-4xl font-bold text-yellow-400">{passport.passport_level}</span>
+                <CardContent className="p-4 sm:p-5 md:p-6 text-center">
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                    <LevelIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-yellow-400" />
+                    <span className="text-3xl sm:text-4xl font-bold text-yellow-400">{passport.passport_level}</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-1">{passport.passport_level_name}</h3>
-                  <p className="text-sm text-gray-400">Current Level</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-1">{passport.passport_level_name}</h3>
+                  <p className="text-xs sm:text-sm text-gray-400">Current Level</p>
                 </CardContent>
               </Card>
 
               {/* Anime Vibe */}
-              <Card className={`bg-gradient-to-br ${vibeConfig.bgPattern} border-gray-600/30 backdrop-blur-sm`}>
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-3xl">{vibeConfig.emoji}</span>
-                    <VibeIcon className={`h-8 w-8 ${vibeConfig.color}`} />
+              <Card className={`bg-gradient-to-br ${vibeConfig.bgPattern} border-gray-600/30 backdrop-blur-sm sm:col-span-2 md:col-span-1`}>
+                <CardContent className="p-4 sm:p-5 md:p-6 text-center">
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                    <span className="text-2xl sm:text-3xl">{vibeConfig.emoji}</span>
+                    <VibeIcon className={`h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 ${vibeConfig.color}`} />
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-1">{passport.anime_vibe}</h3>
-                  <p className="text-sm text-gray-400">{vibeConfig.description}</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-1">{passport.anime_vibe}</h3>
+                  <p className="text-xs sm:text-sm text-gray-400">{vibeConfig.description}</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Top Anime Section */}
             <div>
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <Star className="h-6 w-6 text-yellow-400" />
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+                <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400" />
                 Top 5 Anime
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                 {passport.top_5_anime.map((anime, index) => (
                   <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-purple-500/50 transition-all duration-300 group">
-                    <CardContent className="p-4">
-                      <div className="aspect-[3/4] bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-3 overflow-hidden relative">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="aspect-[3/4] bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-2 sm:mb-3 overflow-hidden relative">
                         {anime.image_url ? (
                           <img 
                             src={anime.image_url} 
@@ -357,13 +357,13 @@ Join me on otakucafe.fun! 🌟`;
                             <Tv className="h-8 w-8" />
                           </div>
                         )}
-                        <div className="absolute top-2 left-2">
-                          <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold">
+                        <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">
+                          <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-[10px] sm:text-xs">
                             #{anime.rank}
                           </Badge>
                         </div>
                       </div>
-                      <h4 className="text-sm font-semibold text-white text-center line-clamp-2">
+                      <h4 className="text-xs sm:text-sm font-semibold text-white text-center line-clamp-2">
                         {anime.title}
                       </h4>
                     </CardContent>
@@ -376,10 +376,10 @@ Join me on otakucafe.fun! 🌟`;
                     onClick={() => setEditMode(true)}
                   >
                     <CardContent className="p-4">
-                      <div className="aspect-[3/4] bg-gray-800/50 rounded-lg mb-3 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors duration-300">
-                        <Plus className="h-8 w-8 text-gray-500 group-hover:text-purple-400" />
+                      <div className="aspect-[3/4] bg-gray-800/50 rounded-lg mb-2 sm:mb-3 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors duration-300">
+                        <Plus className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-gray-500 group-hover:text-purple-400" />
                       </div>
-                      <p className="text-xs text-gray-500 text-center">Add Anime</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 text-center">Add Anime</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -388,11 +388,11 @@ Join me on otakucafe.fun! 🌟`;
 
             {/* Top Characters Section */}
             <div>
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <Users className="h-6 w-6 text-cyan-400" />
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-400" />
                 Top 3 Characters
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 {passport.top_3_characters.map((character, index) => (
                   <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-cyan-500/50 transition-all duration-300">
                     <CardContent className="p-4">

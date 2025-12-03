@@ -146,33 +146,33 @@ export default function ProfileSetup({ user, setUser }) {
     <div className="h-screen bg-[#1a2332] text-white flex flex-col overflow-hidden">
       <div className="flex-shrink-0 border-b border-white/5">
         {/* Navigation Header */}
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-3 sm:p-4">
           <div></div>
           <Button
             variant="ghost"
             onClick={() => navigate('/chat')}
-            className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
         </div>
         
         {/* Title Section */}
-        <div className="text-center pb-4 px-4">
-          <h1 className="text-2xl font-bold mb-1">Complete Your Profile</h1>
-          <p className="text-sm text-gray-300">Tell us about your anime preferences to find your perfect match</p>
+        <div className="text-center pb-3 sm:pb-4 px-3 sm:px-4">
+          <h1 className="text-xl sm:text-2xl font-bold mb-1">Complete Your Profile</h1>
+          <p className="text-xs sm:text-sm text-gray-300">Tell us about your anime preferences to find your perfect match</p>
         </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <div className="container mx-auto px-4 max-w-4xl h-full py-4">
-          <form onSubmit={handleSubmit} className="bg-[#283347] border border-white/5 p-6 rounded-2xl h-full flex flex-col" data-testid="profile-setup-form">
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        <div className="container mx-auto px-3 sm:px-4 max-w-4xl h-full py-3 sm:py-4">
+          <form onSubmit={handleSubmit} className="bg-[#283347] border border-white/5 p-4 sm:p-6 rounded-2xl h-full flex flex-col" data-testid="profile-setup-form">
+            <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 pr-1 sm:pr-2">
               {/* Username */}
               <div>
-                <label className="block text-sm font-semibold mb-1">
+                <label className="block text-xs sm:text-sm font-semibold mb-1">
                   Username
-                  <span className="text-xs text-gray-400 ml-2">
+                  <span className="text-[10px] sm:text-xs text-gray-400 ml-2">
                     ({3 - (user.username_changes || 0)} changes remaining)
                   </span>
                 </label>
@@ -181,28 +181,28 @@ export default function ProfileSetup({ user, setUser }) {
                   placeholder="Enter your username..."
                   value={profile.name}
                   onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                  className="bg-[#1e2936] border-white/10 text-white text-sm"
+                  className="bg-[#1e2936] border-white/10 text-white text-xs sm:text-sm"
                   disabled={(user.username_changes || 0) >= 3}
                 />
                 {(user.username_changes || 0) >= 3 && (
-                  <p className="text-xs text-red-400 mt-1">Maximum username changes reached</p>
+                  <p className="text-[10px] sm:text-xs text-red-400 mt-1">Maximum username changes reached</p>
                 )}
               </div>
 
               {/* Favorite Anime */}
               <div>
-                <label className="block text-sm font-semibold mb-1">Favorite Anime (Select at least 3)</label>
+                <label className="block text-xs sm:text-sm font-semibold mb-1">Favorite Anime (Select at least 3)</label>
                 
                 {/* Search existing anime */}
                 <div className="relative mb-2">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2 sm:left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
                   <Input
                     data-testid="anime-search-input"
                     type="text"
                     placeholder="Search anime database..."
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="bg-[#1e2936] border-white/10 text-white pl-8 h-8 text-sm"
+                    className="bg-[#1e2936] border-white/10 text-white pl-7 sm:pl-8 h-8 sm:h-9 text-xs sm:text-sm"
                   />
                   {searchResults.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-[#1e2936] border border-white/10 rounded-lg max-h-40 overflow-y-auto">
@@ -213,8 +213,8 @@ export default function ProfileSetup({ user, setUser }) {
                           className="p-2 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
                           data-testid={`anime-result-${anime.id}`}
                         >
-                          <p className="font-semibold text-sm">{anime.title}</p>
-                          <p className="text-xs text-gray-400">{anime.genres.join(', ')}</p>
+                          <p className="font-semibold text-xs sm:text-sm">{anime.title}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-400">{anime.genres.join(', ')}</p>
                         </div>
                       ))}
                     </div>
@@ -222,7 +222,7 @@ export default function ProfileSetup({ user, setUser }) {
                 </div>
 
                 {/* Add custom anime */}
-                <div className="flex gap-2 mb-2">
+                <div className="flex gap-1.5 sm:gap-2 mb-2">
                   <Input
                     data-testid="custom-anime-input"
                     type="text"
@@ -230,28 +230,28 @@ export default function ProfileSetup({ user, setUser }) {
                     value={customAnime}
                     onChange={(e) => setCustomAnime(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addCustomAnime()}
-                    className="bg-[#1e2936] border-white/10 text-white h-8 text-sm flex-1"
+                    className="bg-[#1e2936] border-white/10 text-white h-8 sm:h-9 text-xs sm:text-sm flex-1"
                   />
                   <Button
                     type="button"
                     onClick={addCustomAnime}
                     disabled={!customAnime.trim()}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white px-3 h-8 text-sm"
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white px-2 sm:px-3 h-8 sm:h-9 text-xs sm:text-sm"
                   >
                     Add
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 sm:gap-1.5">
                   {profile.favorite_anime.map((anime, index) => (
                     <Badge
                       key={index}
-                      className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 px-2 py-0.5 flex items-center gap-1 text-xs"
+                      className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 px-1.5 sm:px-2 py-0.5 flex items-center gap-1 text-[10px] sm:text-xs"
                       data-testid={`selected-anime-${index}`}
                     >
                       {anime}
                       <X
-                        className="h-3 w-3 cursor-pointer hover:text-red-400"
+                        className="h-2.5 w-2.5 sm:h-3 sm:w-3 cursor-pointer hover:text-red-400"
                         onClick={() => removeAnime(anime)}
                       />
                     </Badge>
@@ -261,13 +261,13 @@ export default function ProfileSetup({ user, setUser }) {
 
               {/* Genres */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Favorite Genres</label>
-                <div className="flex flex-wrap gap-1">
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">Favorite Genres</label>
+                <div className="flex flex-wrap gap-1 sm:gap-1.5">
                   {genres.map((genre) => (
                     <Badge
                       key={genre}
                       onClick={() => toggleGenre(genre)}
-                      className={`cursor-pointer px-3 py-1 text-xs ${
+                      className={`cursor-pointer px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs ${
                         profile.favorite_genres.includes(genre)
                           ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
                           : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
@@ -282,13 +282,13 @@ export default function ProfileSetup({ user, setUser }) {
 
               {/* Themes */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Favorite Themes</label>
-                <div className="flex flex-wrap gap-1">
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">Favorite Themes</label>
+                <div className="flex flex-wrap gap-1 sm:gap-1.5">
                   {themes.map((theme) => (
                     <Badge
                       key={theme}
                       onClick={() => toggleTheme(theme)}
-                      className={`cursor-pointer px-3 py-1 text-xs ${
+                      className={`cursor-pointer px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs ${
                         profile.favorite_themes.includes(theme)
                           ? 'bg-purple-500/30 text-purple-300 border-purple-500/50'
                           : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
@@ -302,17 +302,17 @@ export default function ProfileSetup({ user, setUser }) {
               </div>
             </div>
 
-            <div className="flex-shrink-0 pt-4 border-t border-white/5">
+            <div className="flex-shrink-0 pt-3 sm:pt-4 border-t border-white/5">
               <Button
                 type="submit"
                 disabled={loading || profile.favorite_anime.length < 3 || !profile.name.trim()}
-                className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-4 text-base font-semibold rounded-xl shadow-lg shadow-cyan-500/20"
+                className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 sm:py-4 text-sm sm:text-base font-semibold rounded-xl shadow-lg shadow-cyan-500/20"
                 data-testid="submit-profile-btn"
               >
                 {loading ? 'Saving...' : 'Complete Setup'}
               </Button>
               {(!profile.name.trim() || profile.favorite_anime.length < 3) && (
-                <p className="text-xs text-gray-400 mt-2 text-center">
+                <p className="text-[10px] sm:text-xs text-gray-400 mt-2 text-center">
                   {!profile.name.trim() ? 'Username required' : 'Select at least 3 anime to continue'}
                 </p>
               )}

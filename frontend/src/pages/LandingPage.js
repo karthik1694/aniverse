@@ -35,9 +35,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col">
       {/* Navigation */}
       <nav className="border-b border-cyan-500/10 bg-[#0a0e1a]/95 backdrop-blur-md flex-shrink-0 relative z-20">
-        <div className="container mx-auto px-6 py-3">
+        <div className="container mx-auto px-4 sm:px-6 py-2 sm:py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2.5">
+            <div className="flex items-center space-x-2">
               {/* Custom Anime Cafe Logo */}
               <div className="relative group">
                 {/* Animated gradient background */}
@@ -72,7 +72,7 @@ export default function LandingPage() {
               
               {/* Brand Text */}
               <div className="flex items-baseline">
-                <h1 className="text-xl font-black text-white tracking-tight">
+                <h1 className="text-base sm:text-xl font-black text-white tracking-tight">
                   otaku<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">cafe</span><span className="text-[0.7em] text-purple-400">.fun</span>
                 </h1>
               </div>
@@ -80,7 +80,7 @@ export default function LandingPage() {
             <Button
               onClick={handleLogin}
               data-testid="landing-login-btn"
-              className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-semibold text-sm shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300"
             >
               Sign In
             </Button>
@@ -104,31 +104,31 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e1a]/60 via-[#0a0e1a]/50 to-[#0a0e1a]/90" />
 
         {/* Hero Content */}
-        <div className="relative z-20 container mx-auto px-6 py-20">
+        <div className="relative z-20 container mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-full mb-6">
-              <Star className="h-5 w-5 text-cyan-400" />
-              <span className="text-sm text-cyan-400 font-medium">Join 10,000+ anime fans worldwide</span>
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-full mb-4 sm:mb-6">
+              <Star className="h-4 sm:h-5 w-4 sm:w-5 text-cyan-400" />
+              <span className="text-xs sm:text-sm text-cyan-400 font-medium">Join 10,000+ anime fans worldwide</span>
             </div>
             
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
               <span style={{ textShadow: '0 4px 12px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6)' }}>Connect with{' '}</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500">
                 Anime Fans
               </span>
             </h2>
             
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.7)' }}>
+            <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.7)' }}>
               Chat, share recommendations, and make friends with anime lovers around the world. Find your community and connect over your favorite shows!
             </p>
             
             <Button
               onClick={handleStartChatting}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-10 py-4 rounded-lg font-bold text-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300 w-full sm:w-auto max-w-sm mx-auto"
             >
               Start Chatting Free
             </Button>
-            <p className="text-sm text-gray-400 mt-3">
+            <p className="text-xs sm:text-sm text-gray-400 mt-3 px-4">
               Chat anonymously • No account required • <button onClick={handleLogin} className="text-cyan-400 hover:text-cyan-300 underline">Or sign in</button>
             </p>
           </div>
@@ -137,46 +137,46 @@ export default function LandingPage() {
 
       {/* Scrollable Content Section - Normal Background */}
       <div className="bg-gradient-to-b from-[#0a0e1a] to-[#16213e]">
-        <div className="container mx-auto px-6 py-16">
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16">
           
           {/* Interest-Based Matching Section */}
-          <div className="max-w-6xl mx-auto mb-20">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <p className="text-purple-400 text-lg mb-4 italic">Strangers turned friends</p>
-                <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
+              <div className="px-2">
+                <p className="text-purple-400 text-base sm:text-lg mb-3 sm:mb-4 italic">Strangers turned friends</p>
+                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
                   Chat with Random Strangers With Similar{' '}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
                     Interests
                   </span>
                 </h3>
-                <p className="text-gray-300 text-lg leading-relaxed">
+                <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
                   Talk to online strangers who love what you love. Chat about anime, hobbies and enjoy fun conversations - all from one place! Making new friends based on interests is made easy.
                 </p>
               </div>
               
-              <div className="relative">
-                <div className="bg-[#1a2332]/80 backdrop-blur-md border border-cyan-500/30 p-8 rounded-2xl">
-                  <div className="flex items-center justify-between mb-6">
-                    <h4 className="text-xl font-bold text-white">Interests</h4>
+              <div className="relative px-2">
+                <div className="bg-[#1a2332]/80 backdrop-blur-md border border-cyan-500/30 p-4 sm:p-6 md:p-8 rounded-2xl">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <h4 className="text-lg sm:text-xl font-bold text-white">Interests</h4>
                   </div>
-                  <div className="flex flex-wrap gap-3">
-                    <div className="px-4 py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20">
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
                       One Piece
                     </div>
-                    <div className="px-4 py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
                       Naruto
                     </div>
-                    <div className="px-4 py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
                       Attack on Titan
                     </div>
-                    <div className="px-4 py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
                       Demon Slayer
                     </div>
-                    <div className="px-4 py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
                       My Hero Academia
                     </div>
-                    <div className="px-4 py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
                       Jujutsu Kaisen
                     </div>
                   </div>
@@ -185,59 +185,59 @@ export default function LandingPage() {
             </div>
           </div>
           {/* Main Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto mb-8 sm:mb-12 px-2">
             {/* Card 1 - Smart Matching */}
-            <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 group">
+            <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-6 sm:p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 group">
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-cyan-500/10 p-4 rounded-full group-hover:bg-cyan-500/20 transition-colors">
                   <Users className="h-10 w-10 text-cyan-400" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-center text-white mb-2">Smart Matching</h3>
-              <p className="text-gray-400 text-center text-sm">
+              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Smart Matching</h3>
+              <p className="text-gray-400 text-center text-xs sm:text-sm">
                 Get matched with fans who share your anime interests and vibes
               </p>
             </div>
 
             {/* Card 2 - Live Chat */}
-            <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 group">
+            <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-6 sm:p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 group">
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-cyan-500/10 p-4 rounded-full group-hover:bg-cyan-500/20 transition-colors">
                   <MessageCircle className="h-10 w-10 text-cyan-400" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-center text-white mb-2">Live Chat</h3>
-              <p className="text-gray-400 text-center text-sm">
+              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Live Chat</h3>
+              <p className="text-gray-400 text-center text-xs sm:text-sm">
                 Chat in real-time with friends and make new connections
               </p>
             </div>
 
             {/* Card 3 - Video Calls */}
-            <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 group">
+            <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-6 sm:p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 group sm:col-span-2 md:col-span-1">
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-cyan-500/10 p-4 rounded-full group-hover:bg-cyan-500/20 transition-colors">
                   <Video className="h-10 w-10 text-cyan-400" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-center text-white mb-2">Watch Together</h3>
-              <p className="text-gray-400 text-center text-sm">
+              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Watch Together</h3>
+              <p className="text-gray-400 text-center text-xs sm:text-sm">
                 Stream and enjoy anime with friends in real-time
               </p>
             </div>
           </div>
 
           {/* Best Site Section */}
-          <div className="max-w-5xl mx-auto mb-20 text-center">
-            <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="max-w-5xl mx-auto mb-12 sm:mb-16 md:mb-20 text-center px-2">
+            <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
               The best site to Chat with Anime Fans.
             </h3>
-            <p className="text-gray-400 text-lg max-w-3xl mx-auto leading-relaxed">
+            <p className="text-gray-400 text-sm sm:text-base md:text-lg max-w-3xl mx-auto leading-relaxed px-2">
               Many text and video chat apps offer various features for meeting random strangers or chatting without bots, but not all of them are modern, secure and feature rich with a diverse interesting people from around the globe.
             </p>
           </div>
 
           {/* 6 Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
             {/* Video Chat */}
             <div className="text-center">
               <div className="flex items-center justify-center mb-6">
@@ -245,8 +245,8 @@ export default function LandingPage() {
                   <Video className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-2xl font-bold text-white mb-4">Video Chat</h4>
-              <p className="text-gray-400 leading-relaxed">
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Video Chat</h4>
+              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Experience authentic face to face encounters with real people from all over the world.
               </p>
             </div>
@@ -258,8 +258,8 @@ export default function LandingPage() {
                   <UserPlus className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-2xl font-bold text-white mb-4">Friends & History</h4>
-              <p className="text-gray-400 leading-relaxed">
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Friends & History</h4>
+              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Had a fun chat but skipped by accident? Find them in your chat history and add them as a friend.
               </p>
             </div>
@@ -271,8 +271,8 @@ export default function LandingPage() {
                   <Filter className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-2xl font-bold text-white mb-4">Search Filters</h4>
-              <p className="text-gray-400 leading-relaxed">
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Search Filters</h4>
+              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Want to narrow down your search? Use interests, genders or locations to filter the strangers you meet.
               </p>
             </div>
@@ -284,8 +284,8 @@ export default function LandingPage() {
                   <MessageCircle className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-2xl font-bold text-white mb-4">Text Chat</h4>
-              <p className="text-gray-400 leading-relaxed">
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Text Chat</h4>
+              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Not in the mood for video? No problem! You can also chat with strangers via text messages. Full of features.
               </p>
             </div>
@@ -297,8 +297,8 @@ export default function LandingPage() {
                   <Shield className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-2xl font-bold text-white mb-4">Safety & Moderation</h4>
-              <p className="text-gray-400 leading-relaxed">
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Safety & Moderation</h4>
+              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 We make use of advanced AI technologies and enhanced spam protection to keep your chats clean.
               </p>
             </div>
@@ -310,8 +310,8 @@ export default function LandingPage() {
                   <Star className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-2xl font-bold text-white mb-4">Feature rich</h4>
-              <p className="text-gray-400 leading-relaxed">
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Feature rich</h4>
+              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 From sending photos, videos, having voice calls, to sharing GIFs and adding avatars, we have it all.
               </p>
             </div>
@@ -320,10 +320,10 @@ export default function LandingPage() {
           {/* Anime Passport Feature - REMOVED */}
 
           {/* Video Chat Section */}
-          <div className="max-w-6xl mx-auto mb-20">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
               <div className="order-2 md:order-1">
-                <div className="relative p-8">
+                <div className="relative p-4 sm:p-6 md:p-8">
                   <div className="bg-gradient-to-br from-purple-600/20 to-blue-600/20 p-4 rounded-3xl border-2 border-purple-500/40">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-[#1a2332] rounded-2xl aspect-video flex items-center justify-center relative overflow-hidden">
@@ -339,16 +339,16 @@ export default function LandingPage() {
                 </div>
               </div>
               
-              <div className="order-1 md:order-2">
-                <p className="text-purple-400 text-lg mb-4 italic">Say hello to anime fans worldwide</p>
-                <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              <div className="order-1 md:order-2 px-2">
+                <p className="text-purple-400 text-base sm:text-lg mb-3 sm:mb-4 italic">Say hello to anime fans worldwide</p>
+                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
                   Simple and{' '}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
                     Fun
                   </span>
                   {' '}Video Chats
                 </h3>
-                <p className="text-gray-300 text-lg leading-relaxed">
+                <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
                   Enjoy video chats with anime fans worldwide. Our platform is designed to make it easy and safe to connect with people from all over the world. Meet new people, make friends, and have fun!
                 </p>
               </div>
@@ -356,23 +356,23 @@ export default function LandingPage() {
           </div>
 
           {/* From Strangers to Friends Section */}
-          <div className="max-w-6xl mx-auto mb-20">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <p className="text-purple-400 text-lg mb-4 italic">Make the most out of your chats</p>
-                <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
+              <div className="px-2">
+                <p className="text-purple-400 text-base sm:text-lg mb-3 sm:mb-4 italic">Make the most out of your chats</p>
+                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
                   From Strangers to{' '}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-500">
                     Friends
                   </span>
                 </h3>
-                <p className="text-gray-300 text-lg leading-relaxed">
+                <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
                   Discover new people, make real and genuine connections, discuss your favorite anime or just have casual text or video chats. Our platform is designed to help you experience the best of online chatting with fellow otakus.
                 </p>
               </div>
               
-              <div className="relative">
-                <div className="relative p-8">
+              <div className="relative px-2">
+                <div className="relative p-4 sm:p-6 md:p-8">
                   {/* Decorative illustration placeholder */}
                   <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 p-8 rounded-3xl border-2 border-blue-500/40 relative">
                     {/* Friends list preview */}
@@ -407,18 +407,18 @@ export default function LandingPage() {
           </div>
 
           {/* CTA Section */}
-          <div className="max-w-3xl mx-auto text-center mb-20">
-            <h3 className="text-3xl font-bold text-white mb-4">Ready to Make Anime Friends?</h3>
-            <p className="text-gray-300 text-lg mb-6">
+          <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16 md:mb-20 px-4">
+            <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Ready to Make Anime Friends?</h3>
+            <p className="text-gray-300 text-base sm:text-lg mb-4 sm:mb-6">
               Join thousands of anime fans chatting right now. Share your passion and discover new shows together!
             </p>
             <Button
               onClick={handleStartChatting}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-10 py-4 rounded-lg font-bold text-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300 w-full sm:w-auto max-w-sm mx-auto"
             >
               Join Free Now
             </Button>
-            <p className="text-sm text-gray-400 mt-3">
+            <p className="text-xs sm:text-sm text-gray-400 mt-3">
               Start chatting instantly • No signup needed • <button onClick={handleLogin} className="text-cyan-400 hover:text-cyan-300 underline">Or claim account</button>
             </p>
           </div>
@@ -427,10 +427,10 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-[#0a0e1a] border-t border-cyan-500/10">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="relative">
                 <div className="bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-700 p-2.5 rounded-xl shadow-lg shadow-cyan-500/30">
                   {/* Coffee cup icon - smaller version for footer */}
@@ -442,13 +442,13 @@ export default function LandingPage() {
                   </svg>
                 </div>
               </div>
-              <span className="text-xl font-bold text-white">
+              <span className="text-lg sm:text-xl font-bold text-white">
                 otaku<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">cafe</span><span className="text-[0.5em] text-purple-400">.fun</span>
               </span>
             </div>
 
             {/* Links */}
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm">
               <a href="/terms" className="text-gray-400 hover:text-white transition-colors">
                 Terms Of Service
               </a>
@@ -464,40 +464,40 @@ export default function LandingPage() {
             </div>
 
             {/* Social Icons */}
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
                 aria-label="Instagram"
               >
-                <Instagram className="h-5 w-5 text-white" />
+                <Instagram className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
                 aria-label="Twitter"
               >
-                <Twitter className="h-5 w-5 text-white" />
+                <Twitter className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
                 aria-label="Discord"
               >
-                <MessageCircle className="h-5 w-5 text-white" />
+                <MessageCircle className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
                 aria-label="TikTok"
               >
-                <Music className="h-5 w-5 text-white" />
+                <Music className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
             </div>
           </div>
 
           {/* Copyright */}
-          <div className="text-center mt-8 pt-6 border-t border-cyan-500/10">
+          <div className="text-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-cyan-500/10">
             <p className="text-gray-500 text-sm">
               All rights reserved. otakucafe.fun © {new Date().getFullYear()}
             </p>
