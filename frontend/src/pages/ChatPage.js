@@ -510,23 +510,6 @@ export default function ChatPage({ user, openSettings }) {
           onBack={() => navigate('/dashboard')}
           matchingStats={matchingStats}
         />
-        
-        {/* Filter Button - Fixed Position */}
-        {!matching && (
-          <button
-            onClick={() => setShowFilters(true)}
-            className="fixed bottom-6 right-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-50"
-            title="Search Filters"
-          >
-            <Filter className="h-6 w-6" />
-          </button>
-        )}
-        
-        <SearchFilters
-          isOpen={showFilters}
-          onClose={() => setShowFilters(false)}
-          onFiltersChange={setSearchFilters}
-        />
       </>
     );
   }
