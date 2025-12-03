@@ -29,7 +29,7 @@ import {
   Sword,
   Moon
 } from 'lucide-react';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import PassportEditor from './PassportEditor';
 import PassportBadges from './PassportBadges';

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import { ArrowLeft, MessageCircle, UserMinus, UserPlus, Heart, Star, Calendar } from 'lucide-react';
 import { io } from 'socket.io-client';
@@ -118,10 +118,21 @@ export default function ProfilePage({ user }) {
 
   const handleSendFriendRequest = async () => {
     try {
-      await axiosInstance.post(`/friend-requests/${friendId}`);
+      // For anonymous users, include user data in the request
+      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      
+      console.log('Sending friend request from profile:', {
+        friend_id: friendId,
+        is_anonymous: user?.isAnonymous,
+        user_id: user?.id,
+        has_user_data: !!requestBody.user_data
+      });
+      
+      await axiosInstance.post(`/friend-requests/${friendId}`, requestBody);
       toast.success('Friend request sent!');
       setFriendRequestSent(true);
     } catch (error) {
+      console.error('Friend request error:', error.response?.data || error.message);
       toast.error(error.response?.data?.detail || 'Failed to send friend request');
     }
   };

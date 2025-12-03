@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import { ArrowLeft, Send, MoreVertical, Trash2, UserMinus, User } from 'lucide-react';
 import io from 'socket.io-client';

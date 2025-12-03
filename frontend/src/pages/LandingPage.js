@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Video, MessageCircle, Users, Sparkles, Heart, Star, Trophy, Zap, Shield, Target, UserPlus, Filter, Instagram, Twitter, Music } from 'lucide-react';
+import { createAnonymousSession } from '../utils/anonymousAuth';
 
 export default function LandingPage() {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const navigate = useNavigate();
 
   // Preload background image
   useEffect(() => {
@@ -16,6 +19,16 @@ export default function LandingPage() {
     const redirectUrl = `${window.location.origin}/`;
     console.log('Redirecting to auth with URL:', redirectUrl);
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  const handleStartChatting = () => {
+    console.log('Starting anonymous chat...');
+    // Create anonymous session
+    const { user, sessionToken } = createAnonymousSession();
+    console.log('✅ Anonymous user created:', user.name);
+    
+    // Reload the page to trigger auth check and redirect to chat
+    window.location.reload();
   };
 
   return (
@@ -110,11 +123,14 @@ export default function LandingPage() {
             </p>
             
             <Button
-              onClick={handleLogin}
+              onClick={handleStartChatting}
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-10 py-4 rounded-lg font-bold text-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300"
             >
               Start Chatting Free
             </Button>
+            <p className="text-sm text-gray-400 mt-3">
+              Chat anonymously • No account required • <button onClick={handleLogin} className="text-cyan-400 hover:text-cyan-300 underline">Or sign in</button>
+            </p>
           </div>
         </div>
       </div>
@@ -397,12 +413,14 @@ export default function LandingPage() {
               Join thousands of anime fans chatting right now. Share your passion and discover new shows together!
             </p>
             <Button
-              onClick={handleLogin}
+              onClick={handleStartChatting}
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-10 py-4 rounded-lg font-bold text-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300"
             >
               Join Free Now
             </Button>
-            <p className="text-sm text-gray-500 mt-4">Free forever • No credit card required</p>
+            <p className="text-sm text-gray-400 mt-3">
+              Start chatting instantly • No signup needed • <button onClick={handleLogin} className="text-cyan-400 hover:text-cyan-300 underline">Or claim account</button>
+            </p>
           </div>
         </div>
       </div>

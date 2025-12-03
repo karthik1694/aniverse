@@ -2,20 +2,25 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import { MessageCircle, Users, Plus, Settings, LogOut, Crown, Menu } from 'lucide-react';
 import UserArc from './UserArc';
 import PremiumUpgrade from './PremiumUpgrade';
 import ArcProgressionNotification from './ArcProgressionNotification';
 import UserAvatar from './UserAvatar';
+import ClaimAccountBanner from './ClaimAccountBanner';
+import SettingsModal from './SettingsModal';
+import { isAnonymousUser, clearAnonymousSession } from '../utils/anonymousAuth';
 import io from 'socket.io-client';
+import React from 'react';
 
 export default function MainLayout({ user, setUser, children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('chat');
   const [showPremiumUpgrade, setShowPremiumUpgrade] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
@@ -130,7 +135,9 @@ export default function MainLayout({ user, setUser, children }) {
 
   const loadFriends = async () => {
     try {
-      const response = await axiosInstance.get('friends');
+      // For anonymous users, pass user_id as query parameter
+      const params = user?.isAnonymous ? { user_id: user.id } : {};
+      const response = await axiosInstance.get('friends', { params });
       setFriends(response.data);
     } catch (error) {
       console.error('Error loading friends:', error);
@@ -139,10 +146,19 @@ export default function MainLayout({ user, setUser, children }) {
 
   const loadFriendRequests = async () => {
     try {
-      const response = await axiosInstance.get('friend-requests');
+      // For anonymous users, pass user_id as query parameter
+      const params = user?.isAnonymous ? { user_id: user.id } : {};
+      console.log('📥 Loading friend requests:', {
+        isAnonymous: user?.isAnonymous,
+        userId: user?.id,
+        userName: user?.name,
+        params
+      });
+      const response = await axiosInstance.get('friend-requests', { params });
+      console.log('✅ Friend requests loaded:', response.data);
       setFriendRequests(response.data);
     } catch (error) {
-      console.error('Error loading friend requests:', error);
+      console.error('❌ Error loading friend requests:', error.response?.data || error);
     }
   };
 
@@ -216,27 +232,45 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      await axiosInstance.post(`friend-requests/${requestId}/accept`);
+      // For anonymous users, include user data in the request
+      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      await axiosInstance.post(`friend-requests/${requestId}/accept`, requestBody);
       toast.success('Friend request accepted!');
       loadFriends();
       loadFriendRequests();
     } catch (error) {
+      console.error('Error accepting request:', error);
       toast.error('Failed to accept request');
     }
   };
 
   const handleRejectRequest = async (requestId) => {
     try {
-      await axiosInstance.post(`friend-requests/${requestId}/reject`);
+      // For anonymous users, include user data in the request
+      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      await axiosInstance.post(`friend-requests/${requestId}/reject`, requestBody);
       toast.success('Friend request rejected');
       loadFriendRequests();
     } catch (error) {
+      console.error('Error rejecting request:', error);
       toast.error('Failed to reject request');
     }
   };
 
   const handleLogout = async () => {
     try {
+      // Check if user is anonymous
+      if (isAnonymousUser(user)) {
+        // Clear anonymous session
+        clearAnonymousSession();
+        localStorage.clear();
+        setUser(null);
+        navigate('/');
+        toast.success('Logged out successfully');
+        return;
+      }
+      
+      // Regular OAuth logout
       await axiosInstance.post('auth/logout');
       setUser(null);
       navigate('/');
@@ -245,10 +279,24 @@ export default function MainLayout({ user, setUser, children }) {
     }
   };
 
+  const handleClaimAccount = () => {
+    // Redirect to OAuth login to claim the account
+    const redirectUrl = `${window.location.origin}/`;
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] text-white flex overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] text-white flex flex-col overflow-hidden">
+      {/* Claim Account Banner for Anonymous Users */}
+      {isAnonymousUser(user) && (
+        <ClaimAccountBanner 
+          onClaim={handleClaimAccount}
+        />
+      )}
+      
+      <div className="flex-1 flex overflow-hidden">
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-b border-gray-800/50 z-50 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -270,7 +318,7 @@ export default function MainLayout({ user, setUser, children }) {
               variant="ghost"
               size="sm"
               className="text-gray-400 hover:text-white p-2"
-              onClick={() => navigate('/profile-setup')}
+              onClick={() => setShowSettingsModal(true)}
             >
               <Settings className="h-5 w-5" />
             </Button>
@@ -550,10 +598,7 @@ export default function MainLayout({ user, setUser, children }) {
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 hover:bg-white/5"
-                    onClick={() => {
-                      navigate('/profile-setup');
-                      setMobileMenuOpen(false);
-                    }}
+                    onClick={() => setShowSettingsModal(true)}
                   >
                     <Settings className="h-4 w-4 text-gray-400" />
                   </Button>
@@ -825,7 +870,7 @@ export default function MainLayout({ user, setUser, children }) {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0 hover:bg-white/5"
-                onClick={() => navigate('/profile-setup')}
+                onClick={() => setShowSettingsModal(true)}
               >
                 <Settings className="h-4 w-4 text-gray-400" />
               </Button>
@@ -844,7 +889,9 @@ export default function MainLayout({ user, setUser, children }) {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col pt-16 md:pt-0">
-        {children}
+        {React.isValidElement(children)
+          ? React.cloneElement(children, { openSettings: () => setShowSettingsModal(true) })
+          : children}
       </div>
 
       {/* Premium Upgrade Modal */}
@@ -856,8 +903,18 @@ export default function MainLayout({ user, setUser, children }) {
         />
       )}
 
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <SettingsModal
+          user={user}
+          setUser={setUser}
+          onClose={() => setShowSettingsModal(false)}
+        />
+      )}
+
       {/* Arc Progression Notification */}
       <ArcProgressionNotification socket={socket} />
+      </div>
     </div>
   );
 }

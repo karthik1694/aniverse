@@ -18,7 +18,7 @@ import {
   Plus,
   Check
 } from 'lucide-react';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import UserAvatar from './UserAvatar';
 

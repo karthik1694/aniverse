@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Users, Wifi, WifiOff, Heart, Sparkles, Zap, Star } from 'lucide-react';
+import { ArrowLeft, Users, Wifi, WifiOff, Heart, Sparkles, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MatchingScreen = ({ 
@@ -16,7 +16,6 @@ const MatchingScreen = ({
   const [searchPhase, setSearchPhase] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
   const [searchText, setSearchText] = useState('Initializing...');
-  const [showSkipMessage, setShowSkipMessage] = useState(false);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
 
   // Search phases and messages
@@ -63,18 +62,7 @@ const MatchingScreen = ({
     return () => clearTimeout(timeout);
   }, [matching, searchPhase]);
 
-  // Handle skip scenarios
-  useEffect(() => {
-    if (matching && searchPhase >= 3) {
-      // Simulate occasional skip messages for engagement
-      const skipChance = Math.random();
-      if (skipChance < 0.15) { // 15% chance
-        setShowSkipMessage(true);
-        toast.info('Someone skipped, finding another match...');
-        setTimeout(() => setShowSkipMessage(false), 3000);
-      }
-    }
-  }, [searchPhase, matching]);
+  // Removed fake skip messages - only show real events
 
   // Connection retry logic
   useEffect(() => {
@@ -137,32 +125,21 @@ const MatchingScreen = ({
   const renderStats = () => {
     if (!matching) return null;
     
+    // Show real queue count - activeMatchers is the actual number searching right now
+    const searchingNow = matchingStats.activeMatchers || 0;
+    
     return (
       <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <Badge className="bg-cyan-500/20 text-cyan-300 px-2 sm:px-3 py-1 text-xs sm:text-sm">
+        <Badge className="bg-cyan-500/20 text-cyan-300 px-2 sm:px-3 py-1 text-xs sm:text-sm animate-pulse">
           <Users className="h-3 w-3 mr-1" />
-          {matchingStats.activeMatchers || Math.floor(Math.random() * 50) + 20} searching
-        </Badge>
-        <Badge className="bg-green-500/20 text-green-300 px-2 sm:px-3 py-1 text-xs sm:text-sm">
-          <Heart className="h-3 w-3 mr-1" />
-          {Math.floor(Math.random() * 100) + 500} matches today
+          <span className="font-semibold">{searchingNow}</span>
+          <span className="ml-1">searching right now</span>
         </Badge>
       </div>
     );
   };
 
-  const renderSkipMessage = () => {
-    if (!showSkipMessage) return null;
-    
-    return (
-      <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-        <div className="flex items-center gap-2 text-yellow-300">
-          <Zap className="h-4 w-4" />
-          <span className="text-sm">Someone skipped - finding you a better match!</span>
-        </div>
-      </div>
-    );
-  };
+  // Removed fake skip message rendering
 
   const renderConnectionStatus = () => {
     return (
@@ -301,7 +278,6 @@ const MatchingScreen = ({
           {matching ? searchText : 'Join thousands of anime fans and find your perfect match'}
         </p>
         
-        {renderSkipMessage()}
         {renderConnectionStatus()}
         {renderStats()}
         

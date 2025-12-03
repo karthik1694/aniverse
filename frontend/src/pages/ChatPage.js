@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { Send, UserPlus, X, ArrowLeft, Loader2, Filter, Flag, Image } from 'lucide-react';
@@ -15,10 +15,11 @@ import UserAvatar from '../components/UserAvatar';
 import SearchFilters from '../components/SearchFilters';
 import EmojiPicker from '../components/EmojiPicker';
 import ReportUserModal from '../components/ReportUserModal';
+import Dashboard from './Dashboard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function ChatPage({ user }) {
+export default function ChatPage({ user, openSettings }) {
   const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -39,6 +40,7 @@ export default function ChatPage({ user }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showDashboard, setShowDashboard] = useState(true);
   const fileInputRef = useRef(null);
 
   // Dynamic usernames and avatars
@@ -400,9 +402,34 @@ export default function ChatPage({ user }) {
     if (!partner) return;
     
     try {
-      await axiosInstance.post(`/friend-requests/${partner.id}`);
+      // For anonymous users, include user data in the request
+      let requestBody = {};
+      
+      if (user?.isAnonymous) {
+        requestBody = { user_data: user };
+        console.log('🔵 Sending anonymous friend request:', {
+          partner_id: partner.id,
+          user_id: user?.id,
+          user_name: user?.name,
+          isAnonymous: user?.isAnonymous,
+          requestBody: JSON.stringify(requestBody)
+        });
+      } else {
+        console.log('🟢 Sending authenticated friend request:', {
+          partner_id: partner.id,
+          user_id: user?.id
+        });
+      }
+      
+      const response = await axiosInstance.post(`/friend-requests/${partner.id}`, requestBody);
+      console.log('✅ Friend request response:', response.data);
       toast.success('Friend request sent!');
     } catch (error) {
+      console.error('❌ Friend request error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       toast.error(error.response?.data?.detail || 'Failed to send friend request');
     }
   };
@@ -439,9 +466,22 @@ export default function ChatPage({ user }) {
     setMatched(false);
     setPartner(null);
     setMessages([]);
+    setShowDashboard(true);
     // Optionally start matching again automatically
     // handleStartMatching();
   };
+
+  // Show dashboard first before matching
+  if (showDashboard && !matching && !matched) {
+    return <Dashboard 
+      user={user} 
+      onStartChat={() => {
+        setShowDashboard(false);
+        handleStartMatching();
+      }}
+      onManageInterests={openSettings}
+    />;
+  }
 
   if (!matched) {
     return (
@@ -646,7 +686,7 @@ export default function ChatPage({ user }) {
             )}
             
             {/* Shared Anime Universe Section - Simplified */}
-            {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0 || compatibility > 0) && (
+            {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0 || sharedUniverse.shared_themes?.length > 0 || compatibility > 0) && (
               <div className="bg-[#1e2936]/60 backdrop-blur-sm px-4 py-3 border-b border-gray-700/50">
                 {/* Header with Compatibility Score */}
                 <div className="flex items-center justify-between mb-3">
@@ -689,8 +729,25 @@ export default function ChatPage({ user }) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {sharedUniverse.shared_genres.slice(0, 3).map((genre, idx) => (
-                          <Badge key={idx} className="bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 text-xs px-3 py-1">
+                          <Badge key={idx} className="bg-purple-500/20 text-purple-200 border border-purple-500/30 text-xs px-3 py-1">
                             {genre}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Common themes */}
+                  {sharedUniverse.shared_themes?.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-pink-400">🎯</span>
+                        <span className="text-pink-300 font-semibold text-xs">Common themes:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {sharedUniverse.shared_themes.slice(0, 3).map((theme, idx) => (
+                          <Badge key={idx} className="bg-pink-500/20 text-pink-200 border border-pink-500/30 text-xs px-3 py-1">
+                            {theme}
                           </Badge>
                         ))}
                       </div>

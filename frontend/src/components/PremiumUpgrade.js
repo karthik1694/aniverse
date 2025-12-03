@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import { Crown, Check, X, Sparkles, Zap, Star } from 'lucide-react';
 

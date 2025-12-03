@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { X, AlertTriangle, Flag } from 'lucide-react';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 
 const REPORT_REASONS = [

@@ -4,6 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import json
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
@@ -291,6 +292,15 @@ async def get_current_user(request: Request) -> Optional[User]:
         logging.debug("No session token found in cookies or headers")
         return None
     
+    # Check if this is an anonymous session token
+    if session_token.startswith('anon_token_'):
+        logging.debug("Anonymous session detected")
+        # For anonymous users, we don't store in database
+        # The frontend maintains the user data in localStorage
+        # We just validate the token format and return None (frontend handles the user)
+        # Socket.IO will handle anonymous users separately
+        return None
+    
     # Check in-memory sessions first (for development mode)
     if IN_MEMORY_MODE and session_token in IN_MEMORY_SESSIONS:
         session = IN_MEMORY_SESSIONS[session_token]
@@ -463,13 +473,26 @@ async def shutdown_event():
 def calculate_compatibility(user1: User, user2: User) -> int:
     score = 0
     
+    # Check what data is available
+    has_anime = bool(user1.favorite_anime and user2.favorite_anime)
+    has_genres = bool(user1.favorite_genres and user2.favorite_genres)
+    has_themes = bool(user1.favorite_themes and user2.favorite_themes)
+    has_characters = bool(user1.favorite_characters and user2.favorite_characters)
+    
     # Shared favorite anime (High weight - 40 points)
     shared_anime = set(user1.favorite_anime) & set(user2.favorite_anime)
     score += len(shared_anime) * 10
     
-    # Genre alignment (Medium weight - 30 points)
+    # Genre alignment - BOOSTED weight when it's the primary data available
     shared_genres = set(user1.favorite_genres) & set(user2.favorite_genres)
-    score += len(shared_genres) * 5
+    if has_genres:
+        # If users primarily use genres (no anime/themes/characters), give genres much more weight
+        if not (has_anime or has_themes or has_characters):
+            # Genres are the ONLY data - make them worth much more (up to 100 points)
+            score += len(shared_genres) * 20
+        else:
+            # Standard weight when other data exists
+            score += len(shared_genres) * 5
     
     # Theme alignment (Medium weight - 20 points)
     shared_themes = set(user1.favorite_themes) & set(user2.favorite_themes)
@@ -756,14 +779,36 @@ async def update_profile(profile: ProfileUpdate, request: Request):
 
 @api_router.get("/friends")
 async def get_friends(request: Request):
+    logging.info("🔵 Get friends endpoint called")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user in query params
     if not user:
-        raise HTTPException(status_code=401)
+        user_id = request.query_params.get('user_id')
+        
+        if not user_id:
+            logging.error("❌ No authenticated user and no user_id provided")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user requesting friends: {user.name} ({user.id})")
+    else:
+        logging.info(f"✅ Authenticated user requesting friends: {user.name} ({user.id})")
     
     friendships = await db.friendships.find(
         {"$or": [{"user1_id": user.id}, {"user2_id": user.id}]},
         {"_id": 0}
     ).to_list(100)
+    
+    logging.info(f"💬 Found {len(friendships)} friendships for {user.name}")
     
     # Use a set to avoid duplicate friend IDs
     friend_ids = set()
@@ -777,13 +822,81 @@ async def get_friends(request: Request):
         if friend_doc:
             friends.append(User(**friend_doc).dict())
     
+    logging.info(f"✅ Returning {len(friends)} friends for {user.name}")
     return friends
 
 @api_router.post("/friend-requests/{to_user_id}")
 async def send_friend_request(to_user_id: str, request: Request):
+    logging.info(f"🔵 Friend request endpoint called: to_user_id={to_user_id}")
+    
+    # Read request body FIRST (can only be read once)
+    body = None
+    try:
+        body = await request.json()
+        logging.info(f"📝 Request body received: {json.dumps(body, default=str)[:200]}")
+    except Exception as e:
+        logging.info(f"ℹ️ No JSON body in request: {e}")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    logging.info(f"🔑 get_current_user result: {user.name if user else 'None'}")
+    
+    # If no authenticated user, check for anonymous user data in request body
     if not user:
-        raise HTTPException(status_code=401)
+        logging.info("🟡 No authenticated user, checking request body for anonymous user...")
+        
+        if not body:
+            logging.error("❌ No request body and no authenticated user")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        user_data = body.get('user_data')
+        logging.info(f"👤 user_data from body: {user_data.get('name') if user_data else 'None'}")
+        
+        if not user_data:
+            logging.error("❌ No user_data in request body")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        if not user_data.get('isAnonymous'):
+            logging.error("❌ user_data exists but isAnonymous is not True")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # For anonymous users, ensure they exist in the database
+        user_id = user_data.get('id')
+        logging.info(f"✅ Anonymous user detected: {user_data.get('name')} (ID: {user_id})")
+        
+        if not user_id:
+            logging.error("❌ Anonymous user data missing ID")
+            raise HTTPException(status_code=401, detail="Invalid user data")
+        
+        try:
+            existing_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+            
+            if not existing_user:
+                # Create anonymous user in database
+                user_dict = user_data.copy()
+                if 'created_at' not in user_dict:
+                    user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                elif isinstance(user_dict.get('created_at'), datetime):
+                    user_dict['created_at'] = user_dict['created_at'].isoformat()
+                await db.users.insert_one(user_dict)
+                logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+            else:
+                # Update anonymous user data (in case interests were added)
+                user_dict = user_data.copy()
+                if isinstance(user_dict.get('created_at'), datetime):
+                    user_dict['created_at'] = user_dict['created_at'].isoformat()
+                await db.users.update_one(
+                    {"id": user_id},
+                    {"$set": user_dict}
+                )
+                logging.info(f"✅ Updated anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+            
+            # Create a User object for validation
+            user = User(**user_data)
+            logging.info(f"✅ Anonymous user authenticated for friend request: {user.name}")
+        except Exception as e:
+            logging.error(f"❌ Error handling anonymous user in database: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to process anonymous user")
     
     # Check if trying to send request to self
     if user.id == to_user_id:
@@ -828,18 +941,54 @@ async def send_friend_request(to_user_id: str, request: Request):
     req_dict['created_at'] = req_dict['created_at'].isoformat()
     await db.friend_requests.insert_one(req_dict)
     
+    logging.info(f"✅ Friend request created: {user.name} ({user.id}) -> {to_user_id}")
     return {"message": "Friend request sent"}
 
 @api_router.get("/friend-requests")
 async def get_friend_requests(request: Request):
+    logging.info("🔵 Get friend requests endpoint called")
+    
+    # Read request body first (for anonymous users)
+    body = None
+    try:
+        body = await request.json()
+    except Exception:
+        pass  # GET requests typically don't have body, but check anyway
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user in query params or body
     if not user:
-        raise HTTPException(status_code=401)
+        # For GET requests, anonymous users should pass user_id as query parameter
+        user_id = request.query_params.get('user_id')
+        
+        if not user_id and body:
+            user_data = body.get('user_data')
+            if user_data:
+                user_id = user_data.get('id')
+        
+        if not user_id:
+            logging.error("❌ No authenticated user and no user_id provided")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user requesting friend requests: {user.name} ({user.id})")
+    else:
+        logging.info(f"✅ Authenticated user requesting friend requests: {user.name} ({user.id})")
     
     requests = await db.friend_requests.find(
         {"to_user_id": user.id, "status": "pending"},
         {"_id": 0}
     ).to_list(50)
+    
+    logging.info(f"📥 Found {len(requests)} pending friend requests for {user.name}")
     
     result = []
     for req in requests:
@@ -854,9 +1003,35 @@ async def get_friend_requests(request: Request):
 
 @api_router.post("/friend-requests/{request_id}/accept")
 async def accept_friend_request(request_id: str, request: Request):
+    logging.info(f"🔵 Accept friend request endpoint called: request_id={request_id}")
+    
+    # Read request body first
+    body = None
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user data in request body
     if not user:
-        raise HTTPException(status_code=401)
+        if not body or not body.get('user_data'):
+            logging.error("❌ No authenticated user and no user_data in body")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        user_data = body.get('user_data')
+        user_id = user_data.get('id')
+        
+        # Verify user exists
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user accepting request: {user.name}")
     
     friend_request = await db.friend_requests.find_one({"id": request_id}, {"_id": 0})
     if not friend_request:
@@ -903,9 +1078,35 @@ async def accept_friend_request(request_id: str, request: Request):
 @api_router.post("/friend-requests/{request_id}/reject")
 async def reject_friend_request(request_id: str, request: Request):
     """Reject a friend request"""
+    logging.info(f"🔵 Reject friend request endpoint called: request_id={request_id}")
+    
+    # Read request body first
+    body = None
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user data in request body
     if not user:
-        raise HTTPException(status_code=401)
+        if not body or not body.get('user_data'):
+            logging.error("❌ No authenticated user and no user_data in body")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        user_data = body.get('user_data')
+        user_id = user_data.get('id')
+        
+        # Verify user exists
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user rejecting request: {user.name}")
     
     friend_request = await db.friend_requests.find_one({"id": request_id}, {"_id": 0})
     if not friend_request:
@@ -2245,8 +2446,23 @@ async def join_matching(sid, data):
                 await sio.emit('error', {'message': 'User not found'}, room=sid)
                 return
         else:
-            user = User(**user_doc)
-        logging.info(f"User loaded: {user.name}, anime count: {len(user.favorite_anime)}")
+            # User found in DB - but update with latest user_data if provided (for anonymous users)
+            if user_data:
+                logging.info(f"Updating user {user_id} with fresh data from client")
+                # Merge database data with client data (client data takes precedence for interests)
+                merged_data = {**user_doc, **user_data}
+                user = User(**merged_data)
+                # Update database with latest data
+                update_dict = user.dict()
+                update_dict['created_at'] = update_dict['created_at'].isoformat() if isinstance(update_dict['created_at'], datetime) else update_dict['created_at']
+                await db.users.update_one(
+                    {"id": user_id},
+                    {"$set": update_dict}
+                )
+                logging.info(f"Updated user in database: {user.name}, anime: {len(user.favorite_anime)}, genres: {len(user.favorite_genres)}, themes: {len(user.favorite_themes)}")
+            else:
+                user = User(**user_doc)
+        logging.info(f"User loaded: {user.name}, anime count: {len(user.favorite_anime)}, genres: {len(user.favorite_genres)}, themes: {len(user.favorite_themes)}")
         
         # Check premium limits for daily matches
         today = datetime.now(timezone.utc).date()
@@ -2305,6 +2521,9 @@ async def join_matching(sid, data):
                 matching_queue = [u for u in matching_queue if u['sid'] != best_match['sid']]
                 logging.info(f"Removed matched user from queue. Size: {original_queue_size} -> {len(matching_queue)}")
                 
+                # Broadcast queue update to remaining users
+                await broadcast_queue_update()
+                
                 # Create match
                 partner_sid = best_match['sid']
                 partner_data = best_match['user_data']
@@ -2346,8 +2565,12 @@ async def join_matching(sid, data):
                 
                 # Add match type info to shared universe
                 shared_universe['match_type'] = match_type
-                if match_type == 'interest_based':
-                    shared_universe['match_message'] = f"Great match! You both love similar anime! 🎌 (Compatibility: {best_score}%)"
+                if match_type == 'great_match':
+                    shared_universe['match_message'] = f"🌟 Amazing match! You both have incredible anime compatibility! (Compatibility: {best_score}%)"
+                elif match_type == 'good_match':
+                    shared_universe['match_message'] = f"✨ Great match! You both love similar anime! (Compatibility: {best_score}%)"
+                elif match_type == 'interest_based':
+                    shared_universe['match_message'] = f"👍 Nice match! You have some shared interests! (Compatibility: {best_score}%)"
                 else:
                     shared_universe['match_message'] = "Connected with a fellow anime fan! Let's chat! 🌟"
                 
@@ -2388,6 +2611,10 @@ async def join_matching(sid, data):
             
             # Send matching stats to user
             await send_matching_stats(sid)
+            
+            # Broadcast queue update to all users in queue
+            await broadcast_queue_update()
+            
             await sio.emit('searching', room=sid)
     except Exception as e:
         logging.error(f"Error in join_matching: {e}", exc_info=True)
@@ -2558,6 +2785,10 @@ async def skip_partner(sid):
             
             # Send matching stats
             await send_matching_stats(sid)
+            
+            # Broadcast queue update to all searching users
+            await broadcast_queue_update()
+            
             await sio.emit('searching', room=sid)
             
             # Try to find immediate match
@@ -2572,6 +2803,9 @@ async def cancel_matching(sid):
         original_size = len(matching_queue)
         matching_queue = [u for u in matching_queue if u['sid'] != sid]
         logging.info(f"Removed user from matching queue. Queue size: {original_size} -> {len(matching_queue)}")
+        
+        # Broadcast queue update to remaining users
+        await broadcast_queue_update()
         
         # Remove from active matches if somehow still there
         if sid in active_matches:
@@ -2597,6 +2831,22 @@ async def send_matching_stats(sid):
         'avgWaitTime': 30  # Placeholder - could calculate real average
     }
     await sio.emit('matching_stats', stats, room=sid)
+
+async def broadcast_queue_update():
+    """Broadcast queue size update to all users in the matching queue"""
+    if not matching_queue:
+        return
+    
+    stats = {
+        'activeMatchers': len(matching_queue),
+        'totalUsers': len(active_users)
+    }
+    
+    # Send to all users currently in the queue
+    for queued_user in matching_queue:
+        await sio.emit('matching_stats', stats, room=queued_user['sid'])
+    
+    logging.info(f"Broadcasted queue update: {len(matching_queue)} users searching")
 
 @api_router.get("/debug/queue")
 async def get_queue_status(request: Request):
@@ -2639,11 +2889,18 @@ async def clear_matching_queue(request: Request):
     }
 
 # Matching configuration constants
-MIN_COMPATIBILITY_THRESHOLD = 5  # Minimum score for interest-based matching (lowered to be more inclusive)
+MIN_COMPATIBILITY_THRESHOLD = 15  # Minimum score for interest-based matching
+GOOD_MATCH_THRESHOLD = 30  # Score for a good interest-based match
+GREAT_MATCH_THRESHOLD = 50  # Score for a great interest-based match
 
 async def find_best_match(user, queue):
     """
     Enhanced matching algorithm that prioritizes interest-based matches but falls back to random matching.
+    Priority:
+    1. Great matches (50%+ compatibility)
+    2. Good matches (30%+ compatibility)
+    3. Decent matches (15%+ compatibility)
+    4. Random match if no interest overlap
     """
     if not queue:
         logging.info("No users in queue for matching")
@@ -2657,44 +2914,95 @@ async def find_best_match(user, queue):
         return None
     
     logging.info(f"Finding best match for user {user.name} from queue of {len(filtered_queue)} users")
-    logging.info(f"User {user.name} preferences: anime={user.favorite_anime}, genres={user.favorite_genres}")
+    logging.info(f"User {user.name} preferences: anime={user.favorite_anime[:3] if len(user.favorite_anime) > 3 else user.favorite_anime}, genres={user.favorite_genres[:3] if len(user.favorite_genres) > 3 else user.favorite_genres}")
     
-    best_match = None
-    best_score = 0
-    match_type = 'random'
+    # Log what type of matching will be prioritized
+    if user.favorite_genres:
+        logging.info(f"User {user.name} has {len(user.favorite_genres)} genre interests: {user.favorite_genres}")
+    if user.favorite_anime:
+        logging.info(f"User {user.name} has {len(user.favorite_anime)} favorite anime: {user.favorite_anime}")
     
-    # Try interest-based matching first
+    # Categorize potential matches by compatibility
+    great_matches = []  # 50%+
+    good_matches = []   # 30-49%
+    decent_matches = [] # 15-29%
+    low_matches = []    # <15%
+    
+    # Evaluate all potential matches
     for queued_user in filtered_queue:
         queued_user_obj = User(**queued_user['user_data'])
-        logging.info(f"Queued user {queued_user_obj.name} preferences: anime={queued_user_obj.favorite_anime}, genres={queued_user_obj.favorite_genres}")
-        
         compatibility_score = calculate_compatibility(user, queued_user_obj)
         
-        logging.info(f"Compatibility between {user.name} and {queued_user_obj.name}: {compatibility_score}")
+        # Log shared interests for debugging
+        shared_genres = set(user.favorite_genres) & set(queued_user_obj.favorite_genres)
+        if shared_genres:
+            logging.info(f"  → {user.name} & {queued_user_obj.name} share genres: {list(shared_genres)}")
         
-        # If we find a good match (score > 15), use it
-        if compatibility_score > 15 and compatibility_score > best_score:
-            best_match = queued_user
-            best_score = compatibility_score
-            match_type = 'interest_based'
-        # Keep track of the best match even if it's low compatibility
-        elif compatibility_score > best_score:
-            best_match = queued_user
-            best_score = compatibility_score
+        match_data = {
+            'queued_user': queued_user,
+            'score': compatibility_score,
+            'user_obj': queued_user_obj
+        }
+        
+        if compatibility_score >= GREAT_MATCH_THRESHOLD:
+            great_matches.append(match_data)
+            logging.info(f"🌟 GREAT match: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
+        elif compatibility_score >= GOOD_MATCH_THRESHOLD:
+            good_matches.append(match_data)
+            logging.info(f"✨ GOOD match: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
+        elif compatibility_score >= MIN_COMPATIBILITY_THRESHOLD:
+            decent_matches.append(match_data)
+            logging.info(f"👍 Decent match: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
+        else:
+            low_matches.append(match_data)
+            logging.info(f"🎲 Low compatibility: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
     
-    # If no good interest-based match found, use random matching
-    if best_score <= 15:
-        logging.info(f"No strong interest-based match found (best score: {best_score}), using random matching")
-        best_match = random.choice(filtered_queue)
-        best_score = random.randint(10, 25)  # Random score for display
-        match_type = 'random'
+    # Select the best available match
+    selected_match = None
+    match_type = 'random'
     
-    queued_user_obj = User(**best_match['user_data'])
-    logging.info(f"BEST MATCH: {user.name} <-> {queued_user_obj.name} (type: {match_type}, score: {best_score})")
+    if great_matches:
+        # Pick the best great match
+        selected_match = max(great_matches, key=lambda x: x['score'])
+        match_type = 'great_match'
+        logging.info(f"🌟 Selected GREAT match: {selected_match['score']}% compatibility")
+    elif good_matches:
+        # Pick the best good match
+        selected_match = max(good_matches, key=lambda x: x['score'])
+        match_type = 'good_match'
+        logging.info(f"✨ Selected GOOD match: {selected_match['score']}% compatibility")
+    elif decent_matches:
+        # Pick the best decent match
+        selected_match = max(decent_matches, key=lambda x: x['score'])
+        match_type = 'interest_based'
+        logging.info(f"👍 Selected DECENT match: {selected_match['score']}% compatibility")
+    else:
+        # Random matching - pick anyone from low matches
+        if low_matches:
+            selected_match = random.choice(low_matches)
+            match_type = 'random'
+            logging.info(f"🎲 Selected RANDOM match: {selected_match['score']}% compatibility")
+        else:
+            # Fallback to any user in queue
+            queued_user = random.choice(filtered_queue)
+            queued_user_obj = User(**queued_user['user_data'])
+            selected_match = {
+                'queued_user': queued_user,
+                'score': random.randint(5, 15),
+                'user_obj': queued_user_obj
+            }
+            match_type = 'random'
+            logging.info(f"🎲 Fallback RANDOM match")
+    
+    if not selected_match:
+        logging.warning("No match could be selected")
+        return None
+    
+    logging.info(f"FINAL MATCH: {user.name} <-> {selected_match['user_obj'].name} (type: {match_type}, score: {selected_match['score']}%)")
     
     return {
-        'match': best_match,
-        'score': best_score,
+        'match': selected_match['queued_user'],
+        'score': selected_match['score'],
         'type': match_type
     }
 
@@ -2743,8 +3051,12 @@ async def try_immediate_match(sid, user):
         
         # Add match type info
         shared_universe['match_type'] = match_type
-        if match_type == 'interest_based':
-            shared_universe['match_message'] = f"Great match! You both love similar anime! 🎌 (Compatibility: {best_score}%)"
+        if match_type == 'great_match':
+            shared_universe['match_message'] = f"🌟 Amazing match! You both have incredible anime compatibility! (Compatibility: {best_score}%)"
+        elif match_type == 'good_match':
+            shared_universe['match_message'] = f"✨ Great match! You both love similar anime! (Compatibility: {best_score}%)"
+        elif match_type == 'interest_based':
+            shared_universe['match_message'] = f"👍 Nice match! You have some shared interests! (Compatibility: {best_score}%)"
         else:
             shared_universe['match_message'] = "Connected with a fellow anime fan! Let's chat! 🌟"
         

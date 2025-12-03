@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Filter, X, MapPin, Users, Heart } from 'lucide-react';
-import { axiosInstance } from '../App';
+import { axiosInstance } from '../api/axiosInstance';
 
 export default function SearchFilters({ onFiltersChange, isOpen, onClose }) {
   const [filters, setFilters] = useState({

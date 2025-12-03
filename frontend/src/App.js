@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import LandingPage from "./pages/LandingPage";
 import ProfileSetup from "./pages/ProfileSetup";
 import ChatPage from "./pages/ChatPage";
@@ -14,28 +13,20 @@ import RefundPolicy from "./pages/RefundPolicy";
 import MainLayout from "./components/MainLayout";
 import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
 import GenderSelectionModal from "./components/GenderSelectionModal";
+import InterestsSelectionModal from "./components/InterestsSelectionModal";
 import { Toaster } from "./components/ui/sonner";
-
-const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
-const API = `${BACKEND_URL}/api`;
-
-console.log('Environment variables:', {
-  REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
-  REACT_APP_API_URL: process.env.REACT_APP_API_URL,
-  BACKEND_URL,
-  API
-});
-
-export const axiosInstance = axios.create({
-  baseURL: API,
-  withCredentials: true,
-  timeout: 10000 // 10 second timeout
-});
+import { axiosInstance, BACKEND_URL, API } from "./api/axiosInstance";
+import { 
+  createAnonymousSession, 
+  getAnonymousSession, 
+  isAnonymousUser 
+} from "./utils/anonymousAuth";
 
 function AuthWrapper() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showInterestsModal, setShowInterestsModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -66,7 +57,7 @@ function AuthWrapper() {
       console.log('Current pathname:', window.location.pathname);
       console.log('All cookies:', document.cookie);
       
-      // Check for session_id in URL fragment
+      // Check for session_id in URL fragment (OAuth callback)
       const hash = window.location.hash;
       console.log('Checking hash for session_id:', hash);
       if (hash.includes('session_id=')) {
@@ -76,24 +67,12 @@ function AuthWrapper() {
         try {
           // Exchange session_id for session_token
           console.log('Exchanging session_id for session_token...');
-          console.log('Making POST request to:', `${API}/auth/session`);
-          console.log('Request URL:', `${API}/auth/session?session_id=${sessionId}`);
-          console.log('With params:', { session_id: sessionId });
-          console.log('Axios config:', axiosInstance.defaults);
-          
           const response = await axiosInstance.post('auth/session', null, {
             params: { session_id: sessionId },
             withCredentials: true
           });
           
           console.log('✅ Authentication successful!');
-          console.log('Response:', response);
-          console.log('Response status:', response.status);
-          console.log('Response headers:', response.headers);
-          console.log('Response data:', response.data);
-          console.log('User data:', response.data.user);
-          console.log('Session token received:', response.data.session_token ? 'YES' : 'NO');
-          console.log('Cookies after auth:', document.cookie);
           
           if (!response.data.user) {
             console.error('❌ No user data in response!');
@@ -105,18 +84,14 @@ function AuthWrapper() {
           console.log('Setting user state with:', userData);
           setUser(userData);
           
-          // Store session info in localStorage as backup
+          // Store session info in localStorage
           localStorage.setItem('user_id', userData.id);
           localStorage.setItem('user_email', userData.email);
           localStorage.setItem('session_token', response.data.session_token);
           console.log('✅ User stored in state and localStorage');
           
           // Clean URL
-          console.log('Cleaning URL hash...');
           window.history.replaceState({}, document.title, '/');
-          
-          // Set loading to false after user is set
-          console.log('Setting loading to false');
           setLoading(false);
           
           // Check if this is a first-time user (no gender set)
@@ -124,36 +99,47 @@ function AuthWrapper() {
             console.log('First-time user detected, showing gender modal...');
             setShowGenderModal(true);
           } else {
-            // Use setTimeout to ensure state updates are processed
             setTimeout(() => {
-              console.log('Navigating to chat...');
               navigate('/chat', { replace: true });
             }, 100);
           }
           return;
         } catch (authError) {
           console.error('Authentication failed:', authError);
-          console.error('Auth error details:', authError.response?.data);
-          console.error('Auth error status:', authError.response?.status);
-          console.error('Auth error message:', authError.message);
-          console.error('Auth error config:', authError.config);
           setLoading(false);
           return;
         }
       }
       
-      // Check existing session
-      console.log('No session_id in URL, checking existing session...');
-      console.log('Cookies before /auth/me:', document.cookie);
+      // Check existing OAuth session
+      console.log('No session_id in URL, checking existing OAuth session...');
       try {
         const response = await axiosInstance.get('auth/me');
-        console.log('Existing session found:', response.data);
+        console.log('Existing OAuth session found:', response.data);
         setUser(response.data);
+        setLoading(false);
+        return;
       } catch (sessionError) {
-        console.log('No existing session:', sessionError.message);
-        console.log('Session error response:', sessionError.response?.data);
-        console.log('Session error status:', sessionError.response?.status);
+        console.log('No OAuth session found, checking anonymous session...');
       }
+      
+      // Check for existing anonymous session
+      const anonymousSession = getAnonymousSession();
+      if (anonymousSession) {
+        console.log('✅ Found existing anonymous session:', anonymousSession.user.name);
+        setUser(anonymousSession.user);
+        setLoading(false);
+        
+        // Check if anonymous user needs to set gender
+        if (!anonymousSession.user.gender) {
+          console.log('Anonymous user needs to select gender, showing modal...');
+          setShowGenderModal(true);
+        }
+        return;
+      }
+      
+      // No session found - user will stay on landing page
+      console.log('No session found');
     } catch (error) {
       console.error('General auth error:', error);
       if (error.code === 'ECONNREFUSED') {
@@ -168,23 +154,42 @@ function AuthWrapper() {
   const handleGenderSelect = async (gender) => {
     try {
       console.log('Updating user gender:', gender);
-      // Update user profile with selected gender
-      const response = await axiosInstance.put('profile', {
-        ...user,
-        gender: gender
-      });
       
-      const updatedUser = response.data;
-      setUser(updatedUser);
-      setShowGenderModal(false);
-      
-      console.log('Gender updated successfully, navigating to chat...');
-      setTimeout(() => {
-        navigate('/chat', { replace: true });
-      }, 100);
+      // For anonymous users, update localStorage
+      if (isAnonymousUser(user)) {
+        const updatedUser = {
+          ...user,
+          gender: gender
+        };
+        
+        // Update localStorage for anonymous users
+        localStorage.setItem('anonymous_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        setShowGenderModal(false);
+        
+        // Show interests modal next
+        console.log('Anonymous user gender updated, showing interests modal...');
+        setShowInterestsModal(true);
+      } else {
+        // For authenticated users, update via API
+        const response = await axiosInstance.put('profile', {
+          ...user,
+          gender: gender
+        });
+        
+        const updatedUser = response.data;
+        setUser(updatedUser);
+        setShowGenderModal(false);
+        
+        // Navigate to chat/dashboard after gender selection
+        console.log('Gender updated successfully, navigating to chat...');
+        setTimeout(() => {
+          navigate('/chat', { replace: true });
+        }, 100);
+      }
     } catch (error) {
       console.error('Error updating gender:', error);
-      // Still close modal and navigate on error to prevent blocking
+      // Still close modal and navigate to chat
       setShowGenderModal(false);
       setTimeout(() => {
         navigate('/chat', { replace: true });
@@ -194,6 +199,64 @@ function AuthWrapper() {
 
   const handleCloseGenderModal = () => {
     setShowGenderModal(false);
+    // Navigate to chat even if user closes without selecting
+    setTimeout(() => {
+      navigate('/chat', { replace: true });
+    }, 100);
+  };
+
+  const handleInterestsComplete = async (interests) => {
+    try {
+      console.log('Updating user interests:', interests);
+      
+      // For anonymous users, update localStorage
+      if (isAnonymousUser(user)) {
+        const updatedUser = {
+          ...user,
+          favorite_anime: interests.favorite_anime || [],
+          favorite_genres: interests.favorite_genres || [],
+          favorite_themes: interests.favorite_themes || []
+        };
+        
+        // Update localStorage for anonymous users
+        localStorage.setItem('anonymous_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        setShowInterestsModal(false);
+        
+        console.log('Anonymous user interests updated successfully, navigating to chat...');
+        setTimeout(() => {
+          navigate('/chat', { replace: true });
+        }, 100);
+      } else {
+        // For authenticated users, update via API
+        const response = await axiosInstance.put('profile', {
+          ...user,
+          favorite_anime: interests.favorite_anime || [],
+          favorite_genres: interests.favorite_genres || [],
+          favorite_themes: interests.favorite_themes || []
+        });
+        
+        const updatedUser = response.data;
+        setUser(updatedUser);
+        setShowInterestsModal(false);
+        
+        console.log('Interests updated successfully, navigating to chat...');
+        setTimeout(() => {
+          navigate('/chat', { replace: true });
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error updating interests:', error);
+      // Still close modal and navigate on error to prevent blocking
+      setShowInterestsModal(false);
+      setTimeout(() => {
+        navigate('/chat', { replace: true });
+      }, 100);
+    }
+  };
+
+  const handleCloseInterestsModal = () => {
+    setShowInterestsModal(false);
     // Navigate to chat even if user closes without selecting
     setTimeout(() => {
       navigate('/chat', { replace: true });
@@ -259,6 +322,13 @@ function AuthWrapper() {
         isOpen={showGenderModal}
         onClose={handleCloseGenderModal}
         onGenderSelect={handleGenderSelect}
+      />
+      
+      {/* Interests Selection Modal for first-time users */}
+      <InterestsSelectionModal
+        isOpen={showInterestsModal}
+        onClose={handleCloseInterestsModal}
+        onComplete={handleInterestsComplete}
       />
     </>
   );
