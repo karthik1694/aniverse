@@ -1232,9 +1232,29 @@ async def cleanup_duplicate_requests(request: Request):
 
 @api_router.get("/chat/history/{friend_id}")
 async def get_chat_history(friend_id: str, request: Request):
+    logging.info(f"🔵 Get chat history endpoint called: friend_id={friend_id}")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user in query params
     if not user:
-        raise HTTPException(status_code=401)
+        user_id = request.query_params.get('user_id')
+        
+        if not user_id:
+            logging.error("❌ No authenticated user and no user_id provided")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user requesting chat history: {user.name} ({user.id})")
+    else:
+        logging.info(f"✅ Authenticated user requesting chat history: {user.name} ({user.id})")
     
     # Verify friendship exists - only friends can access chat history
     friendship = await db.friendships.find_one({
@@ -1374,9 +1394,29 @@ async def get_room_messages(room_id: str, request: Request, limit: int = 50):
 
 @api_router.get("/direct-messages/{friend_id}")
 async def get_direct_messages(friend_id: str, request: Request, limit: int = 50):
+    logging.info(f"🔵 Get direct messages endpoint called: friend_id={friend_id}")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user in query params
     if not user:
-        raise HTTPException(status_code=401)
+        user_id = request.query_params.get('user_id')
+        
+        if not user_id:
+            logging.error("❌ No authenticated user and no user_id provided")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user requesting direct messages: {user.name} ({user.id})")
+    else:
+        logging.info(f"✅ Authenticated user requesting direct messages: {user.name} ({user.id})")
     
     # Verify friendship exists
     friendship = await db.friendships.find_one({
@@ -1419,9 +1459,29 @@ async def get_direct_messages(friend_id: str, request: Request, limit: int = 50)
 
 @api_router.get("/unread-counts")
 async def get_unread_counts(request: Request):
+    logging.info("🔵 Get unread counts endpoint called")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user in query params
     if not user:
-        raise HTTPException(status_code=401)
+        user_id = request.query_params.get('user_id')
+        
+        if not user_id:
+            logging.error("❌ No authenticated user and no user_id provided")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user requesting unread counts: {user.name} ({user.id})")
+    else:
+        logging.info(f"✅ Authenticated user requesting unread counts: {user.name} ({user.id})")
     
     # Get all friends
     friendships = await db.friendships.find({
@@ -1450,9 +1510,42 @@ async def get_unread_counts(request: Request):
 
 @api_router.post("/mark-messages-read/{friend_id}")
 async def mark_messages_read(friend_id: str, request: Request):
+    logging.info(f"🔵 Mark messages read endpoint called: friend_id={friend_id}")
+    
+    # Read request body first
+    body = None
+    try:
+        body = await request.json()
+        logging.info(f"📝 Request body received: {json.dumps(body, default=str)[:200]}")
+    except Exception as e:
+        logging.info(f"ℹ️ No JSON body in request: {e}")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user data in request body
     if not user:
-        raise HTTPException(status_code=401)
+        logging.info("🟡 No authenticated user, checking request body for anonymous user...")
+        
+        if not body:
+            logging.error("❌ No request body and no authenticated user")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        user_data = body.get('user_data')
+        if not user_data:
+            logging.error("❌ No user_data in request body")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": user_data.get('id')}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {user_data.get('id')}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_data)
+        logging.info(f"✅ Anonymous user authenticated for mark read: {user.name}")
+    else:
+        logging.info(f"✅ Authenticated user marking messages read: {user.name}")
     
     # Verify friendship exists
     friendship = await db.friendships.find_one({
@@ -1479,9 +1572,29 @@ async def mark_messages_read(friend_id: str, request: Request):
 
 @api_router.get("/check-friendship/{user_id}")
 async def check_friendship(user_id: str, request: Request):
+    logging.info(f"🔵 Check friendship endpoint called: user_id={user_id}")
+    
+    # Try to get authenticated user
     user = await get_current_user(request)
+    
+    # If no authenticated user, check for anonymous user in query params
     if not user:
-        raise HTTPException(status_code=401)
+        query_user_id = request.query_params.get('user_id')
+        
+        if not query_user_id:
+            logging.error("❌ No authenticated user and no user_id provided")
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        # Verify the user exists in database
+        user_doc = await db.users.find_one({"id": query_user_id}, {"_id": 0})
+        if not user_doc:
+            logging.error(f"❌ User not found in database: {query_user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user = User(**user_doc)
+        logging.info(f"✅ Anonymous user checking friendship: {user.name} ({user.id})")
+    else:
+        logging.info(f"✅ Authenticated user checking friendship: {user.name} ({user.id})")
     
     # Check if friendship exists
     friendship = await db.friendships.find_one({

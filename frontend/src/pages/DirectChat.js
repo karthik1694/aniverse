@@ -75,7 +75,8 @@ export default function DirectChat({ user }) {
 
   const markMessagesAsRead = async () => {
     try {
-      await axiosInstance.post(`/mark-messages-read/${friendId}`);
+      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      await axiosInstance.post(`/mark-messages-read/${friendId}`, requestBody);
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
@@ -83,7 +84,8 @@ export default function DirectChat({ user }) {
 
   const checkFriendshipStatus = async () => {
     try {
-      const response = await axiosInstance.get(`/check-friendship/${friendId}`);
+      const params = user?.isAnonymous ? { user_id: user.id } : {};
+      const response = await axiosInstance.get(`/check-friendship/${friendId}`, { params });
       setIsFriend(response.data.is_friend);
       console.log('Friendship status:', response.data.is_friend ? 'Friend' : 'Non-friend');
     } catch (error) {
@@ -123,7 +125,8 @@ export default function DirectChat({ user }) {
 
   const loadFriend = async () => {
     try {
-      const response = await axiosInstance.get('friends');
+      const params = user?.isAnonymous ? { user_id: user.id } : {};
+      const response = await axiosInstance.get('friends', { params });
       const friends = response.data;
       const friendData = friends.find(f => f.id === friendId);
       if (friendData) {
@@ -140,7 +143,8 @@ export default function DirectChat({ user }) {
 
   const loadMessages = async () => {
     try {
-      const response = await axiosInstance.get(`/chat/history/${friendId}`);
+      const params = user?.isAnonymous ? { user_id: user.id } : {};
+      const response = await axiosInstance.get(`/chat/history/${friendId}`, { params });
       let historyMessages = response.data;
       
       // Handle different response formats

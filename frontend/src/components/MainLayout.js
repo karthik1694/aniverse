@@ -186,19 +186,20 @@ export default function MainLayout({ user, setUser, children }) {
       console.log('Loading direct messages...');
       
       // Get friends and their latest messages
-      const friendsResponse = await axiosInstance.get('friends');
+      const params = user?.isAnonymous ? { user_id: user.id } : {};
+      const friendsResponse = await axiosInstance.get('friends', { params });
       const friendsList = friendsResponse.data;
       console.log('Friends list:', friendsList);
       
       // Get unread counts for all friends
-      const unreadCountsResponse = await axiosInstance.get('unread-counts');
+      const unreadCountsResponse = await axiosInstance.get('unread-counts', { params });
       const unreadCounts = unreadCountsResponse.data;
       console.log('Unread counts:', unreadCounts);
       
       const conversations = [];
       for (const friend of friendsList) {
         try {
-          const messagesResponse = await axiosInstance.get(`direct-messages/${friend.id}`);
+          const messagesResponse = await axiosInstance.get(`direct-messages/${friend.id}`, { params });
           const messagesData = messagesResponse.data;
           const messages = messagesData.messages || messagesData;
           
