@@ -942,6 +942,22 @@ async def send_friend_request(to_user_id: str, request: Request):
     await db.friend_requests.insert_one(req_dict)
     
     logging.info(f"✅ Friend request created: {user.name} ({user.id}) -> {to_user_id}")
+    
+    # Send real-time notification to the recipient if they're online
+    if to_user_id in active_users:
+        recipient_sid = active_users[to_user_id]['sid']
+        # Get sender info for notification
+        sender_info = {
+            'request_id': friend_request.id,
+            'from_user': {
+                'id': user.id,
+                'name': user.name,
+                'picture': user.picture
+            }
+        }
+        await sio.emit('friend_request_received', sender_info, room=recipient_sid)
+        logging.info(f"📨 Real-time friend request notification sent to {to_user_id}")
+    
     return {"message": "Friend request sent"}
 
 @api_router.get("/friend-requests")
@@ -1072,6 +1088,21 @@ async def accept_friend_request(request_id: str, request: Request):
                 {"user_id": uid},
                 {"$set": {"first_friend_date": datetime.now(timezone.utc).isoformat()}}
             )
+    
+    # Send real-time notification to the requester that their request was accepted
+    requester_id = friend_request['from_user_id']
+    if requester_id in active_users:
+        requester_sid = active_users[requester_id]['sid']
+        # Get accepter info for notification
+        accepter_info = {
+            'friend': {
+                'id': user.id,
+                'name': user.name,
+                'picture': user.picture
+            }
+        }
+        await sio.emit('friend_request_accepted', accepter_info, room=requester_sid)
+        logging.info(f"📨 Real-time acceptance notification sent to {requester_id}")
     
     return {"message": "Friend request accepted"}
 

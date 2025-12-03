@@ -40,6 +40,7 @@ export default function ChatPage({ user, openSettings }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [friendRequestSent, setFriendRequestSent] = useState(false); // Track if request was sent to current partner
   const [showDashboard, setShowDashboard] = useState(true);
   const fileInputRef = useRef(null);
 
@@ -203,6 +204,11 @@ export default function ChatPage({ user, openSettings }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+  
+  // Reset friend request sent flag when partner changes
+  useEffect(() => {
+    setFriendRequestSent(false);
+  }, [partner]);
 
   const handleStartMatching = () => {
     console.log('Starting matching...', { 
@@ -423,14 +429,24 @@ export default function ChatPage({ user, openSettings }) {
       
       const response = await axiosInstance.post(`/friend-requests/${partner.id}`, requestBody);
       console.log('✅ Friend request response:', response.data);
-      toast.success('Friend request sent!');
+      setFriendRequestSent(true); // Mark as sent
+      toast.success('👋 Friend request sent!');
     } catch (error) {
       console.error('❌ Friend request error:', {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message
       });
-      toast.error(error.response?.data?.detail || 'Failed to send friend request');
+      // Check if already sent or already friends
+      if (error.response?.data?.detail?.includes('already sent')) {
+        setFriendRequestSent(true);
+        toast.info('Friend request already sent');
+      } else if (error.response?.data?.detail?.includes('Already friends')) {
+        setFriendRequestSent(true);
+        toast.info('Already friends with this user');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to send friend request');
+      }
     }
   };
 
@@ -615,12 +631,22 @@ export default function ChatPage({ user, openSettings }) {
             <div className="flex gap-1 sm:gap-2">
               <Button
                 onClick={handleSendFriendRequest}
+                disabled={friendRequestSent}
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white p-1.5 sm:p-2"
+                className={`p-1.5 sm:p-2 ${
+                  friendRequestSent 
+                    ? 'text-green-400 cursor-default' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
                 data-testid="send-friend-request-btn"
+                title={friendRequestSent ? 'Friend request sent!' : 'Send friend request'}
               >
-                <UserPlus className="h-4 w-4" />
+                {friendRequestSent ? (
+                  <><UserPlus className="h-4 w-4" /> ✓</>
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
               </Button>
               <Button
                 onClick={() => setShowReportModal(true)}

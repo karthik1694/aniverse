@@ -115,6 +115,22 @@ export default function MainLayout({ user, setUser, children }) {
     newSocket.on('disconnect', () => {
       console.log('Disconnected from socket');
     });
+    
+    // Listen for real-time friend requests
+    newSocket.on('friend_request_received', (data) => {
+      console.log('📨 Real-time friend request received:', data);
+      toast.info(`👋 ${data.from_user.name} sent you a friend request!`);
+      // Reload friend requests to show the new one
+      loadFriendRequests();
+    });
+    
+    // Listen for friend request accepted (when someone accepts your request)
+    newSocket.on('friend_request_accepted', (data) => {
+      console.log('✅ Friend request accepted:', data);
+      toast.success(`🎉 ${data.friend.name} accepted your friend request!`);
+      // Reload friends list
+      loadFriends();
+    });
 
     setSocket(newSocket);
 
@@ -125,13 +141,16 @@ export default function MainLayout({ user, setUser, children }) {
 
   // Separate useEffect to handle tab changes
   useEffect(() => {
+    console.log('📑 Active tab changed to:', activeTab);
     if (activeTab === 'friends') {
+      console.log('🔄 Loading friends and friend requests...');
       loadFriends();
       loadFriendRequests();
     } else if (activeTab === 'chat') {
+      console.log('🔄 Loading direct messages...');
       loadDirectMessages();
     }
-  }, [activeTab]);
+  }, [activeTab, user]); // Add user as dependency to reload when user changes
 
   const loadFriends = async () => {
     try {
