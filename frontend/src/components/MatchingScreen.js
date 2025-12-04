@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Users, Wifi, WifiOff, Heart, Sparkles, Star } from 'lucide-react';
+import { ArrowLeft, Users, Wifi, WifiOff, Heart, Sparkles, Star, Menu, Bell, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { axiosInstance } from '../api/axiosInstance';
+import UserAvatar from './UserAvatar';
 
 const MatchingScreen = ({ 
   matching, 
@@ -11,12 +13,72 @@ const MatchingScreen = ({
   onStartMatching, 
   onCancel, 
   onBack,
+  onOpenMenu,
+  notifications = [],
+  clearNotification,
+  markNotificationRead,
   matchingStats = { totalUsers: 0, activeMatchers: 0 }
 }) => {
   const [searchPhase, setSearchPhase] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
   const [searchText, setSearchText] = useState('Initializing...');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const friendRequestsRef = useRef(null);
+  const notificationsRef = useRef(null);
+
+  // Load friend requests
+  useEffect(() => {
+    const loadFriendRequests = async () => {
+      try {
+        const response = await axiosInstance.get('/friend-requests/pending');
+        if (response.data.friend_requests) {
+          setFriendRequests(response.data.friend_requests);
+        }
+      } catch (error) {
+        console.error('Error loading friend requests:', error);
+      }
+    };
+    loadFriendRequests();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (friendRequestsRef.current && !friendRequestsRef.current.contains(event.target)) {
+        setShowFriendRequests(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      await axiosInstance.post(`/friend-requests/${requestId}/accept`);
+      setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
+      toast.success('Friend request accepted!');
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      toast.error('Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+    try {
+      await axiosInstance.post(`/friend-requests/${requestId}/reject`);
+      setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
+      toast.info('Friend request declined');
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to decline request');
+    }
+  };
 
   // Search phases and messages
   const searchPhases = [
@@ -189,7 +251,143 @@ const MatchingScreen = ({
   };
 
   return (
-    <div className="fixed inset-0 md:relative md:h-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] overflow-hidden z-[60] md:z-auto">
+    <div className="fixed inset-0 md:relative md:h-full flex flex-col bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] overflow-hidden z-[60] md:z-auto">
+      {/* Header - Mobile and Desktop */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/30 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          {/* Menu button - Mobile only */}
+          <button
+            onClick={onOpenMenu}
+            className="md:hidden text-gray-400 hover:text-white p-1"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <span className="text-white font-semibold text-lg">Finding Match</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Friend Requests Icon with Dropdown */}
+          <div className="relative" ref={friendRequestsRef}>
+            <button 
+              onClick={() => setShowFriendRequests(!showFriendRequests)}
+              className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors relative"
+            >
+              <Users className="h-5 w-5" />
+              {friendRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                  {friendRequests.length}
+                </span>
+              )}
+            </button>
+            
+            {/* Friend Requests Dropdown */}
+            {showFriendRequests && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#2b3544] rounded-lg shadow-xl border border-gray-700/50 z-[80] overflow-hidden">
+                <div className="flex items-center gap-2 p-3 border-b border-gray-700/50">
+                  <Users className="h-5 w-5 text-white" />
+                  <h3 className="text-white font-semibold">Friend Requests</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {friendRequests.length > 0 ? (
+                    friendRequests.map(({ request, from_user }) => (
+                      <div key={request.id} className="p-3 border-b border-gray-700/30 last:border-b-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <UserAvatar user={from_user} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white text-sm truncate">{from_user.name}</p>
+                            <p className="text-gray-400 text-xs">sent you a friend request.</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleAcceptRequest(request.id)}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 h-7"
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            onClick={() => handleRejectRequest(request.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1 h-7"
+                          >
+                            Ignore
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-400 text-sm">
+                      No pending friend requests
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Notifications Icon with Dropdown */}
+          <div className="relative" ref={notificationsRef}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors relative"
+            >
+              <Bell className="h-5 w-5" />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </button>
+            
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#2b3544] rounded-lg shadow-xl border border-gray-700/50 z-[80] overflow-hidden">
+                <div className="flex items-center gap-2 p-3 border-b border-gray-700/50">
+                  <Bell className="h-5 w-5 text-white" />
+                  <h3 className="text-white font-semibold">Notifications</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification) => (
+                      <div 
+                        key={notification.id} 
+                        className={`p-3 border-b border-gray-700/30 last:border-b-0 ${!notification.read ? 'bg-cyan-500/10' : ''}`}
+                        onClick={() => markNotificationRead && markNotificationRead(notification.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          {notification.user && <UserAvatar user={notification.user} size="sm" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm">{notification.message}</p>
+                            <p className="text-gray-400 text-xs">
+                              {new Date(notification.timestamp).toLocaleTimeString()}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearNotification && clearNotification(notification.id);
+                            }}
+                            className="text-gray-400 hover:text-white p-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-400 text-sm">
+                      No notifications
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 overflow-hidden relative">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Floating Particles */}
@@ -333,6 +531,7 @@ const MatchingScreen = ({
           </div>
         )}
       </Card>
+      </div>
     </div>
   );
 };

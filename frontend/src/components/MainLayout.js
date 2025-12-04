@@ -27,6 +27,7 @@ export default function MainLayout({ user, setUser, children }) {
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   // Helper function to check if a user is online based on real-time data
   const isUserOnline = (userId) => {
@@ -128,6 +129,15 @@ export default function MainLayout({ user, setUser, children }) {
     newSocket.on('friend_request_accepted', (data) => {
       console.log('✅ Friend request accepted:', data);
       toast.success(`🎉 ${data.friend.name} accepted your friend request!`);
+      // Add to notifications
+      setNotifications(prev => [{
+        id: Date.now(),
+        type: 'friend_accepted',
+        message: `${data.friend.name} accepted your friend request!`,
+        user: data.friend,
+        timestamp: new Date().toISOString(),
+        read: false
+      }, ...prev]);
       // Reload friends list
       loadFriends();
     });
@@ -375,11 +385,11 @@ export default function MainLayout({ user, setUser, children }) {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-[#1a1a2e]/98 backdrop-blur-sm border-r border-gray-800/50 flex flex-col">
+          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f1419] border-r border-gray-800/50 flex flex-col">
             {/* Mobile Sidebar Content - Same as desktop sidebar */}
-            <div className="p-3 border-b border-gray-800/50 pt-14">
-              <h1 className="text-lg font-bold text-white">
-                otakucafe<span className="text-xs text-gray-400">.fun</span>
+            <div className="p-4 border-b border-gray-800/50">
+              <h1 className="text-xl font-bold text-white">
+                otakucafe<span className="text-sm text-gray-400">.fun</span>
               </h1>
             </div>
 
@@ -860,7 +870,10 @@ export default function MainLayout({ user, setUser, children }) {
         {React.isValidElement(children)
           ? React.cloneElement(children, { 
               openSettings: () => setShowSettingsModal(true),
-              openMenu: () => setMobileMenuOpen(true)
+              openMenu: () => setMobileMenuOpen(true),
+              notifications: notifications,
+              clearNotification: (id) => setNotifications(prev => prev.filter(n => n.id !== id)),
+              markNotificationRead: (id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, read: true} : n))
             })
           : children}
       </div>

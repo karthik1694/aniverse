@@ -7,15 +7,17 @@ import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import UserAvatar from '../components/UserAvatar';
 
-export default function Dashboard({ user, onStartChat, onManageInterests, onOpenMenu }) {
+export default function Dashboard({ user, onStartChat, onManageInterests, onOpenMenu, notifications = [], clearNotification, markNotificationRead }) {
   const navigate = useNavigate();
   const [selectedGenderFilter, setSelectedGenderFilter] = useState('both');
   const [interests, setInterests] = useState([]);
   const [newInterest, setNewInterest] = useState('');
   const [isAddingInterest, setIsAddingInterest] = useState(false);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
   const friendRequestsRef = useRef(null);
+  const notificationsRef = useRef(null);
 
   useEffect(() => {
     // Load user interests from all three sources
@@ -47,6 +49,9 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
     const handleClickOutside = (event) => {
       if (friendRequestsRef.current && !friendRequestsRef.current.contains(event.target)) {
         setShowFriendRequests(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -210,9 +215,64 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
               </div>
             )}
           </div>
-          <button className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-            <Bell className="h-5 w-5" />
-          </button>
+          {/* Notifications Icon with Dropdown */}
+          <div className="relative" ref={notificationsRef}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors relative"
+            >
+              <Bell className="h-5 w-5" />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </button>
+            
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#2b3544] rounded-lg shadow-xl border border-gray-700/50 z-[80] overflow-hidden">
+                <div className="flex items-center gap-2 p-3 border-b border-gray-700/50">
+                  <Bell className="h-5 w-5 text-white" />
+                  <h3 className="text-white font-semibold">Notifications</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification) => (
+                      <div 
+                        key={notification.id} 
+                        className={`p-3 border-b border-gray-700/30 last:border-b-0 ${!notification.read ? 'bg-cyan-500/10' : ''}`}
+                        onClick={() => markNotificationRead && markNotificationRead(notification.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          {notification.user && <UserAvatar user={notification.user} size="sm" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm">{notification.message}</p>
+                            <p className="text-gray-400 text-xs">
+                              {new Date(notification.timestamp).toLocaleTimeString()}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearNotification && clearNotification(notification.id);
+                            }}
+                            className="text-gray-400 hover:text-white p-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-400 text-sm">
+                      No notifications
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

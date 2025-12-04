@@ -19,7 +19,7 @@ import Dashboard from './Dashboard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function ChatPage({ user, openSettings, openMenu }) {
+export default function ChatPage({ user, openSettings, openMenu, notifications, clearNotification, markNotificationRead }) {
   const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -497,6 +497,9 @@ export default function ChatPage({ user, openSettings, openMenu }) {
       }}
       onManageInterests={openSettings}
       onOpenMenu={openMenu}
+      notifications={notifications}
+      clearNotification={clearNotification}
+      markNotificationRead={markNotificationRead}
     />;
   }
 
@@ -509,6 +512,10 @@ export default function ChatPage({ user, openSettings, openMenu }) {
           onStartMatching={handleStartMatching}
           onCancel={handleCancelMatching}
           onBack={() => navigate('/dashboard')}
+          onOpenMenu={openMenu}
+          notifications={notifications}
+          clearNotification={clearNotification}
+          markNotificationRead={markNotificationRead}
           matchingStats={matchingStats}
         />
       </>
