@@ -431,25 +431,23 @@ export default function MainLayout({ user, setUser, children }) {
                         </h3>
                         <div className="space-y-2 px-3">
                           {friendRequests.map(({ request, from_user }) => (
-                            <div key={request.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <UserAvatar user={from_user} size="sm" />
-                                <div>
-                                  <p className="font-semibold text-white text-xs">{from_user.name}</p>
-                                </div>
+                            <div key={request.id} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <UserAvatar user={from_user} size="sm" className="flex-shrink-0" />
+                                <p className="font-semibold text-white text-xs truncate">{from_user.name}</p>
                               </div>
-                              <div className="flex gap-1">
+                              <div className="flex gap-1 flex-shrink-0">
                                 <Button
                                   onClick={() => handleAcceptRequest(request.id)}
                                   size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white h-6 text-xs px-2"
+                                  className="bg-green-600 hover:bg-green-700 text-white h-6 w-6 p-0 text-xs"
                                 >
                                   ✓
                                 </Button>
                                 <Button
                                   onClick={() => handleRejectRequest(request.id)}
                                   size="sm"
-                                  className="bg-red-600 hover:bg-red-700 text-white h-6 text-xs px-2"
+                                  className="bg-red-600 hover:bg-red-700 text-white h-6 w-6 p-0 text-xs"
                                 >
                                   ✕
                                 </Button>
@@ -709,25 +707,23 @@ export default function MainLayout({ user, setUser, children }) {
                     </h3>
                     <div className="space-y-2 px-3">
                       {friendRequests.map(({ request, from_user }) => (
-                        <div key={request.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <UserAvatar user={from_user} size="sm" />
-                            <div>
-                              <p className="font-semibold text-white text-xs">{from_user.name}</p>
-                            </div>
+                        <div key={request.id} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <UserAvatar user={from_user} size="sm" className="flex-shrink-0" />
+                            <p className="font-semibold text-white text-xs truncate">{from_user.name}</p>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 flex-shrink-0">
                             <Button
                               onClick={() => handleAcceptRequest(request.id)}
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white h-6 text-xs px-2"
+                              className="bg-green-600 hover:bg-green-700 text-white h-6 w-6 p-0 text-xs"
                             >
                               ✓
                             </Button>
                             <Button
                               onClick={() => handleRejectRequest(request.id)}
                               size="sm"
-                              className="bg-red-600 hover:bg-red-700 text-white h-6 text-xs px-2"
+                              className="bg-red-600 hover:bg-red-700 text-white h-6 w-6 p-0 text-xs"
                             >
                               ✕
                             </Button>

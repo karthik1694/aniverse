@@ -27,14 +27,14 @@ export default function ClaimAccountBanner({ onClaim, onDismiss }) {
   }
 
   return (
-    <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 shadow-sm relative z-50">
+    <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-0.5 shadow-sm relative z-50">
       <div className="flex items-center justify-center gap-2">
         <p className="text-[10px] sm:text-xs">
           You're using an anonymous account.
         </p>
         <Button
           onClick={handleClaim}
-          className="bg-white/20 hover:bg-white/30 text-white font-medium px-2 py-0.5 rounded text-[10px] sm:text-xs transition-all duration-200 h-5 border border-white/30"
+          className="bg-white/20 hover:bg-white/30 text-white font-medium px-2 py-0 rounded text-[10px] sm:text-xs transition-all duration-200 h-4 border border-white/30"
         >
           Claim Account
         </Button>

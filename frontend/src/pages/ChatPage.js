@@ -901,19 +901,17 @@ export default function ChatPage({ user, openSettings, openMenu }) {
               )}
               
               <div className="relative">
-                {/* SKIP button only - Mobile optimized */}
-                <div className="absolute left-0.5 sm:left-1 md:left-2 top-0.5 sm:top-1 md:top-2 z-10">
+                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 sm:py-3">
+                  {/* SKIP button - Inline at start */}
                   <Button
                     onClick={handleSkipPartner}
-                    className="bg-red-500 hover:bg-red-600 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 h-auto rounded"
+                    className="bg-red-500 hover:bg-red-600 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 h-auto rounded flex-shrink-0"
                     size="sm"
                   >
                     SKIP
                   </Button>
-                </div>
-                
-                <div className="bg-[#212d3d]/80 backdrop-blur-sm rounded-lg flex items-center gap-1.5 sm:gap-2 md:gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-3 pl-12 sm:pl-14 md:pl-20">
-                  <div className="flex-1">
+                  
+                  <div className="flex-1 min-w-0">
                     <Input
                       value={messageInput}
                       onChange={handleInputChange}
@@ -928,11 +926,11 @@ export default function ChatPage({ user, openSettings, openMenu }) {
                         }
                       }}
                       placeholder="Send a message"
-                      className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto text-sm sm:text-base"
+                      className="bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0 h-auto text-sm sm:text-base w-full"
                       data-testid="message-input"
                     />
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     {/* Hidden file input */}
                     <input
                       ref={fileInputRef}
@@ -944,33 +942,38 @@ export default function ChatPage({ user, openSettings, openMenu }) {
                     {/* Image upload button */}
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-gray-400 hover:text-white transition-colors"
+                      className="text-gray-400 hover:text-white transition-colors p-1"
                       title="Upload image"
                     >
                       <Image className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="text-gray-400 text-sm cursor-pointer hover:text-white transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowEmojiPicker(!showEmojiPicker);
+                      }}
+                      className="text-gray-400 text-lg cursor-pointer hover:text-white transition-colors p-1"
+                      type="button"
                     >
                       😊
                     </button>
                   </div>
-                  
-                  {/* Emoji Picker - Position relative to input */}
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-full right-0 mb-2">
-                      <EmojiPicker
-                        isOpen={showEmojiPicker}
-                        onClose={() => setShowEmojiPicker(false)}
-                        onEmojiSelect={(emoji) => {
-                          setMessageInput(prev => prev + emoji);
-                          setShowEmojiPicker(false);
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
+                
+                {/* Emoji Picker - Position above input with high z-index */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full right-0 mb-2 z-[80]">
+                    <EmojiPicker
+                      isOpen={showEmojiPicker}
+                      onClose={() => setShowEmojiPicker(false)}
+                      onEmojiSelect={(emoji) => {
+                        setMessageInput(prev => prev + emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
