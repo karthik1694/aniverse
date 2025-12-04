@@ -19,7 +19,7 @@ import Dashboard from './Dashboard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function ChatPage({ user, openSettings }) {
+export default function ChatPage({ user, openSettings, openMenu }) {
   const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -496,6 +496,7 @@ export default function ChatPage({ user, openSettings }) {
         handleStartMatching();
       }}
       onManageInterests={openSettings}
+      onOpenMenu={openMenu}
     />;
   }
 

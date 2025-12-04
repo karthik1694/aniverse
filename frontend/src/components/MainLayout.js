@@ -918,7 +918,10 @@ export default function MainLayout({ user, setUser, children }) {
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col pt-12 md:pt-0">
         {React.isValidElement(children)
-          ? React.cloneElement(children, { openSettings: () => setShowSettingsModal(true) })
+          ? React.cloneElement(children, { 
+              openSettings: () => setShowSettingsModal(true),
+              openMenu: () => setMobileMenuOpen(true)
+            })
           : children}
       </div>
 
