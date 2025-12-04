@@ -279,11 +279,13 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleLogout = async () => {
     try {
+      // Clear all local storage and session data first
+      clearAnonymousSession();
+      localStorage.clear();
+      sessionStorage.clear();
+      
       // Check if user is anonymous
       if (isAnonymousUser(user)) {
-        // Clear anonymous session
-        clearAnonymousSession();
-        localStorage.clear();
         setUser(null);
         navigate('/');
         toast.success('Logged out successfully');
@@ -291,11 +293,23 @@ export default function MainLayout({ user, setUser, children }) {
       }
       
       // Regular OAuth logout
-      await axiosInstance.post('auth/logout');
+      try {
+        await axiosInstance.post('auth/logout');
+      } catch (e) {
+        // Ignore errors on logout API call
+        console.log('Logout API error (ignored):', e);
+      }
+      
       setUser(null);
-      navigate('/');
+      // Force page reload to ensure clean state
+      window.location.href = '/';
     } catch (error) {
-      toast.error('Logout failed');
+      console.error('Logout error:', error);
+      // Force logout anyway
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      window.location.href = '/';
     }
   };
 
