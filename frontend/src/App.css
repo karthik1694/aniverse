@@ -212,6 +212,54 @@ button:active {
   .animate-pulse, .animate-spin, .animate-bounce {
     animation-duration: 2s;
   }
+  
+  /* Mobile modal improvements */
+  .modal-mobile-fullscreen {
+    max-height: 100vh !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Mobile sidebar for settings */
+  .settings-sidebar-mobile {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .settings-sidebar-mobile::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Mobile card stack layout */
+  .mobile-card-stack > * {
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Safe area for notched devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 375px) {
+  html {
+    font-size: 14px;
+  }
+  
+  button, .button {
+    min-height: 40px;
+    min-width: 40px;
+  }
 }
 
 /* Touch-friendly hover states */

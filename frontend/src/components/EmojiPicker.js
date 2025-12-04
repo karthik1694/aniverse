@@ -94,12 +94,12 @@ export default function EmojiPicker({ onEmojiSelect, onClose, isOpen }) {
   }, []);
 
   return (
-    <div className="absolute bottom-16 right-0 bg-[#1a2332] border border-cyan-500/30 rounded-lg shadow-2xl w-80 z-50">
+    <div className="absolute bottom-16 right-0 sm:right-0 left-0 sm:left-auto bg-[#1a2332] border border-cyan-500/30 rounded-lg shadow-2xl w-full sm:w-80 z-50 max-h-[60vh] sm:max-h-none">
       {/* Header */}
-      <div className="flex justify-between items-center p-3 border-b border-gray-700">
+      <div className="flex justify-between items-center p-2 sm:p-3 border-b border-gray-700">
         <div className="flex items-center gap-2">
-          <Smile className="h-5 w-5 text-cyan-400" />
-          <h3 className="text-white font-semibold">Emoji Picker</h3>
+          <Smile className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
+          <h3 className="text-white font-semibold text-sm sm:text-base">Emoji Picker</h3>
         </div>
         <Button
           onClick={onClose}
@@ -114,24 +114,24 @@ export default function EmojiPicker({ onEmojiSelect, onClose, isOpen }) {
       {/* Search */}
       <div className="p-2 border-b border-gray-700">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
           <Input
             placeholder="Search emojis..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-[#0f1419] border-gray-700 text-white pl-8 h-8 text-sm"
+            className="bg-[#0f1419] border-gray-700 text-white pl-7 sm:pl-8 h-8 text-xs sm:text-sm"
           />
         </div>
       </div>
 
       {/* Categories */}
       {!searchQuery && (
-        <div className="flex gap-1 p-2 border-b border-gray-700 overflow-x-auto">
+        <div className="flex gap-0.5 sm:gap-1 p-1.5 sm:p-2 border-b border-gray-700 overflow-x-auto">
           {Object.entries(EMOJI_CATEGORIES).map(([key, category]) => (
             <button
               key={key}
               onClick={() => setSelectedCategory(key)}
-              className={`text-xl px-2 py-1 rounded transition-all ${
+              className={`text-base sm:text-xl px-1.5 sm:px-2 py-1 rounded transition-all flex-shrink-0 ${
                 selectedCategory === key
                   ? 'bg-cyan-500/20 scale-110'
                   : 'hover:bg-gray-700/50'
@@ -145,13 +145,13 @@ export default function EmojiPicker({ onEmojiSelect, onClose, isOpen }) {
       )}
 
       {/* Emoji Grid */}
-      <div className="p-2 h-64 overflow-y-auto">
+      <div className="p-2 h-48 sm:h-64 overflow-y-auto">
         {searchQuery && filteredEmojis.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+          <div className="flex items-center justify-center h-full text-gray-400 text-xs sm:text-sm">
             No emojis found
           </div>
         ) : (
-          <div className="grid grid-cols-8 gap-1">
+          <div className="grid grid-cols-6 sm:grid-cols-8 gap-0.5 sm:gap-1">
             {(searchQuery ? filteredEmojis : 
               selectedCategory === 'recent' && recentEmojis.length > 0 
                 ? recentEmojis 
@@ -160,7 +160,7 @@ export default function EmojiPicker({ onEmojiSelect, onClose, isOpen }) {
               <button
                 key={`${emoji}-${index}`}
                 onClick={() => handleEmojiClick(emoji)}
-                className="text-2xl hover:bg-cyan-500/20 rounded p-1 transition-all hover:scale-125"
+                className="text-xl sm:text-2xl hover:bg-cyan-500/20 rounded p-0.5 sm:p-1 transition-all hover:scale-125"
                 title={emoji}
               >
                 {emoji}
@@ -171,7 +171,7 @@ export default function EmojiPicker({ onEmojiSelect, onClose, isOpen }) {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-gray-700 text-xs text-gray-400 text-center">
+      <div className="p-1.5 sm:p-2 border-t border-gray-700 text-[10px] sm:text-xs text-gray-400 text-center">
         Click an emoji to insert it into your message
       </div>
     </div>

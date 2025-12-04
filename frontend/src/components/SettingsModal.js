@@ -223,11 +223,11 @@ export default function SettingsModal({ user, setUser, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#2b3544] rounded-lg w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-[#2b3544] rounded-lg w-full max-w-3xl max-h-[95vh] sm:max-h-[85vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">Settings</h2>
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Settings</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors p-1"
@@ -236,16 +236,16 @@ export default function SettingsModal({ user, setUser, onClose }) {
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-48 border-r border-white/10 p-3 space-y-1">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+          {/* Sidebar - Horizontal on mobile, Vertical on desktop */}
+          <div className="md:w-48 border-b md:border-b-0 md:border-r border-white/10 p-2 md:p-3 flex md:flex-col gap-1 md:gap-1 overflow-x-auto md:overflow-x-visible">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={`flex items-center gap-2 md:gap-3 px-3 py-2 rounded-lg text-xs sm:text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
                       : 'text-gray-300 hover:bg-white/5 hover:text-white'
@@ -259,13 +259,13 @@ export default function SettingsModal({ user, setUser, onClose }) {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {activeTab === 'profile' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Avatar Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-3">Avatar</label>
-                  <div className="flex items-center gap-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2 sm:mb-3">Avatar</label>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                     <UserAvatar user={user} size="lg" />
                     <div className="text-xs text-gray-400">
                       Avatars are generated automatically based on your username.
@@ -275,7 +275,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
 
                 {/* Username Section */}
                 <div>
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0 mb-3">
                     <div className="flex-1">
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                         USERNAME
@@ -285,7 +285,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
                           <Input
                             value={profile.name}
                             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                            className="bg-[#1e2936] border-gray-700 text-white text-lg"
+                            className="bg-[#1e2936] border-gray-700 text-white text-base sm:text-lg"
                             placeholder="Enter username"
                             disabled={(user.username_changes || 0) >= 3}
                           />
@@ -297,7 +297,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
                         </div>
                       ) : (
                         <>
-                          <p className="text-lg text-white mb-2">{profile.name}</p>
+                          <p className="text-base sm:text-lg text-white mb-2">{profile.name}</p>
                           {!isAnonymousUser(user) && (
                             <p className="text-sm text-gray-400">
                               You have {3 - (user.username_changes || 0)} name changes left for today.
@@ -339,7 +339,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
 
                 {/* Interests Section */}
                 <div>
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0 mb-3">
                     <div className="flex-1">
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                         INTERESTS (ON)
@@ -428,7 +428,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
                       {/* Genres */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Genres</label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {genres.map((genre) => (
                             <Badge
                               key={genre}
@@ -448,7 +448,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
                       {/* Themes */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Themes</label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {themes.map((theme) => (
                             <Badge
                               key={theme}
@@ -466,11 +466,11 @@ export default function SettingsModal({ user, setUser, onClose }) {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 pt-2">
                         <Button
                           onClick={handleSaveInterests}
                           disabled={loading}
-                          className="bg-cyan-500 hover:bg-cyan-600 text-white text-sm px-4 py-2"
+                          className="bg-cyan-500 hover:bg-cyan-600 text-white text-sm px-4 py-2 w-full sm:w-auto"
                         >
                           {loading ? 'Saving...' : 'Save'}
                         </Button>
@@ -500,9 +500,9 @@ export default function SettingsModal({ user, setUser, onClose }) {
             )}
 
             {activeTab === 'account' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Account Settings</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Account Settings</h3>
                   {isAnonymousUser(user) ? (
                     <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
                       <p className="text-sm text-orange-300 mb-3">
@@ -533,11 +533,11 @@ export default function SettingsModal({ user, setUser, onClose }) {
             )}
 
             {activeTab === 'privacy' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Privacy Settings</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-[#1e2936] rounded">
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Privacy Settings</h3>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 p-3 bg-[#1e2936] rounded">
                       <div>
                         <p className="text-sm font-medium text-white">Show Online Status</p>
                         <p className="text-xs text-gray-400">Let others see when you're online</p>
@@ -546,7 +546,7 @@ export default function SettingsModal({ user, setUser, onClose }) {
                         <span className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></span>
                       </button>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-[#1e2936] rounded">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 p-3 bg-[#1e2936] rounded">
                       <div>
                         <p className="text-sm font-medium text-white">Allow Friend Requests</p>
                         <p className="text-xs text-gray-400">Anyone can send you friend requests</p>
@@ -561,13 +561,13 @@ export default function SettingsModal({ user, setUser, onClose }) {
             )}
 
             {activeTab === 'preferences' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Preferences</h3>
-                  <div className="space-y-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Preferences</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">Gender Filter</label>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {['Male', 'Female', 'Both'].map((option) => (
                           <button
                             key={option}

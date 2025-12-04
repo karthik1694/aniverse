@@ -165,7 +165,7 @@ export default function ProfilePage({ user }) {
       </div>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-md border-b border-cyan-500/30 p-4 flex items-center gap-3 relative z-10 shadow-lg">
+      <div className="bg-gradient-to-r from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-md border-b border-cyan-500/30 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 relative z-10 shadow-lg">
         <Button
           variant="ghost"
           size="sm"
@@ -174,34 +174,34 @@ export default function ProfilePage({ user }) {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-xl font-bold text-white">Profile</h1>
+        <h1 className="text-lg sm:text-xl font-bold text-white">Profile</h1>
       </div>
 
       {/* Profile Content */}
-      <div className="p-6 relative z-10">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <div className="p-4 sm:p-6 relative z-10">
+        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
           {/* Profile Header */}
           <Card className="bg-gradient-to-br from-[#1a1a2e]/80 via-[#16213e]/80 to-[#0f1419]/80 backdrop-blur-sm border-cyan-500/30">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-6">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 <div className="relative">
                   <UserAvatar user={profile} size="2xl" className="ring-4 ring-cyan-500/40" />
                   {/* Online status indicator - consistent based on user ID */}
                   {isUserOnline(profile.id) ? (
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-[#0f1419] rounded-full"></div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 border-4 border-[#0f1419] rounded-full"></div>
                   ) : (
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-500 border-4 border-[#0f1419] rounded-full"></div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-gray-500 border-4 border-[#0f1419] rounded-full"></div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-white mb-2">{profile.name}</h2>
-                  <p className="text-cyan-300 mb-4">Anime enthusiast</p>
-                  <div className="flex gap-3">
+                <div className="flex-1 text-center sm:text-left">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">{profile.name}</h2>
+                  <p className="text-cyan-300 mb-3 sm:mb-4 text-sm sm:text-base">Anime enthusiast</p>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     {isFriend ? (
                       <>
                         <Button
                           onClick={handleSendMessage}
-                          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+                          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-sm w-full sm:w-auto"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Message
@@ -209,7 +209,7 @@ export default function ProfilePage({ user }) {
                         <Button
                           onClick={handleUnfriend}
                           variant="outline"
-                          className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                          className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 text-sm w-full sm:w-auto"
                         >
                           <UserMinus className="h-4 w-4 mr-2" />
                           Unfriend
@@ -219,7 +219,7 @@ export default function ProfilePage({ user }) {
                       <Button
                         onClick={handleSendFriendRequest}
                         disabled={friendRequestSent}
-                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white disabled:opacity-50"
+                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white disabled:opacity-50 text-sm w-full sm:w-auto"
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
                         {friendRequestSent ? 'Request Sent' : 'Add Friend'}
@@ -233,86 +233,86 @@ export default function ProfilePage({ user }) {
 
           {/* Favorite Anime */}
           <Card className="bg-gradient-to-br from-[#1a1a2e]/80 via-[#16213e]/80 to-[#0f1419]/80 backdrop-blur-sm border-cyan-500/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-400" />
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
+                <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
                 Favorite Anime
               </CardTitle>
             </CardHeader>
             <CardContent>
               {profile.favorite_anime && profile.favorite_anime.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {profile.favorite_anime.map((anime, index) => (
                     <Badge
                       key={index}
-                      className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30"
+                      className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border-purple-500/30 text-xs sm:text-sm"
                     >
                       {anime}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-400">No favorite anime listed</p>
+                <p className="text-gray-400 text-sm">No favorite anime listed</p>
               )}
             </CardContent>
           </Card>
 
           {/* Favorite Genres */}
           <Card className="bg-gradient-to-br from-[#1a1a2e]/80 via-[#16213e]/80 to-[#0f1419]/80 backdrop-blur-sm border-cyan-500/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Star className="h-5 w-5 text-yellow-400" />
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
                 Favorite Genres
               </CardTitle>
             </CardHeader>
             <CardContent>
               {profile.favorite_genres && profile.favorite_genres.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {profile.favorite_genres.map((genre, index) => (
                     <Badge
                       key={index}
-                      className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border-blue-500/30"
+                      className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border-blue-500/30 text-xs sm:text-sm"
                     >
                       {genre}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-400">No favorite genres listed</p>
+                <p className="text-gray-400 text-sm">No favorite genres listed</p>
               )}
             </CardContent>
           </Card>
 
           {/* Additional Info */}
           <Card className="bg-gradient-to-br from-[#1a1a2e]/80 via-[#16213e]/80 to-[#0f1419]/80 backdrop-blur-sm border-cyan-500/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-green-400" />
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
                 Profile Info
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {profile.age && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Age:</span>
                     <span className="text-white">{profile.age}</span>
                   </div>
                 )}
                 {profile.gender && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Gender:</span>
                     <span className="text-white">{profile.gender}</span>
                   </div>
                 )}
                 {profile.location && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Location:</span>
                     <span className="text-white">{profile.location}</span>
                   </div>
                 )}
                 {profile.bio && (
-                  <div>
+                  <div className="text-sm">
                     <span className="text-gray-400">Bio:</span>
                     <p className="text-white mt-1">{profile.bio}</p>
                   </div>

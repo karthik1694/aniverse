@@ -74,63 +74,63 @@ export default function PremiumUpgrade({ user, setUser, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="bg-[#283347] border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
+      <Card className="bg-[#283347] border-white/10 max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6">
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="bg-gradient-to-br from-yellow-500 to-amber-500 p-2 rounded-full">
-                <Crown className="h-6 w-6 text-black" />
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="flex items-center justify-center gap-2 mb-2 sm:mb-3">
+              <div className="bg-gradient-to-br from-yellow-500 to-amber-500 p-1.5 sm:p-2 rounded-full">
+                <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Upgrade to Premium</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Upgrade to Premium</h2>
             </div>
-            <p className="text-gray-300 text-sm">
+            <p className="text-gray-300 text-xs sm:text-sm">
               Unlock exclusive features and support otakucafe.fun
             </p>
           </div>
 
           {/* Pricing */}
-          <div className="bg-gradient-to-br from-yellow-900/20 to-amber-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6 text-center">
-            <div className="text-3xl font-bold text-yellow-400 mb-1">$9.99</div>
-            <div className="text-sm text-gray-300">per month</div>
-            <Badge className="mt-2 bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
+          <div className="bg-gradient-to-br from-yellow-900/20 to-amber-900/20 border border-yellow-500/30 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-yellow-400 mb-1">$9.99</div>
+            <div className="text-xs sm:text-sm text-gray-300">per month</div>
+            <Badge className="mt-2 bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs">
               30-day free trial
             </Badge>
           </div>
 
           {/* Features Comparison */}
-          <div className="space-y-3 mb-6">
-            <h3 className="text-lg font-semibold text-white mb-3">What's Included</h3>
+          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">What's Included</h3>
             {features.map((feature, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                <div className="flex items-center gap-3">
+              <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 p-2 sm:p-3 bg-white/5 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="text-cyan-400">
                     {feature.icon}
                   </div>
-                  <span className="text-white font-medium text-sm">{feature.name}</span>
+                  <span className="text-white font-medium text-xs sm:text-sm">{feature.name}</span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 pl-6 sm:pl-0">
                   {/* Free */}
-                  <div className="text-center min-w-[80px]">
-                    <div className="text-xs text-gray-400 mb-1">Free</div>
+                  <div className="text-center min-w-[60px] sm:min-w-[80px]">
+                    <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">Free</div>
                     {feature.free === false ? (
-                      <X className="h-4 w-4 text-red-400 mx-auto" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 mx-auto" />
                     ) : feature.free === true ? (
-                      <Check className="h-4 w-4 text-green-400 mx-auto" />
+                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 mx-auto" />
                     ) : (
-                      <span className="text-xs text-gray-300">{feature.free}</span>
+                      <span className="text-[10px] sm:text-xs text-gray-300">{feature.free}</span>
                     )}
                   </div>
                   {/* Premium */}
-                  <div className="text-center min-w-[80px]">
-                    <div className="text-xs text-yellow-400 mb-1">Premium</div>
+                  <div className="text-center min-w-[60px] sm:min-w-[80px]">
+                    <div className="text-[10px] sm:text-xs text-yellow-400 mb-0.5 sm:mb-1">Premium</div>
                     {feature.premium === false ? (
-                      <X className="h-4 w-4 text-red-400 mx-auto" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 mx-auto" />
                     ) : feature.premium === true ? (
-                      <Check className="h-4 w-4 text-green-400 mx-auto" />
+                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 mx-auto" />
                     ) : (
-                      <span className="text-xs text-yellow-300 font-medium">{feature.premium}</span>
+                      <span className="text-[10px] sm:text-xs text-yellow-300 font-medium">{feature.premium}</span>
                     )}
                   </div>
                 </div>
@@ -139,11 +139,11 @@ export default function PremiumUpgrade({ user, setUser, onClose }) {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1 border-white/20 hover:bg-white/5 text-white"
+              className="flex-1 border-white/20 hover:bg-white/5 text-white text-sm sm:text-base py-2 sm:py-2.5"
               disabled={loading}
             >
               Maybe Later
@@ -151,14 +151,14 @@ export default function PremiumUpgrade({ user, setUser, onClose }) {
             <Button
               onClick={handleUpgrade}
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold"
+              className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold text-sm sm:text-base py-2 sm:py-2.5"
             >
               {loading ? 'Processing...' : 'Upgrade Now'}
             </Button>
           </div>
 
           {/* Disclaimer */}
-          <p className="text-xs text-gray-500 text-center mt-4">
+          <p className="text-[10px] sm:text-xs text-gray-500 text-center mt-3 sm:mt-4">
             * This is a demo. No actual payment will be processed.
           </p>
         </div>
