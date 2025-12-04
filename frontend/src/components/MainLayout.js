@@ -423,41 +423,6 @@ export default function MainLayout({ user, setUser, children }) {
               <div className="pt-4">
                 {activeTab === 'friends' ? (
                   <div>
-                    {/* Friend Requests */}
-                    {friendRequests.length > 0 && (
-                      <div className="mb-4">
-                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
-                          Friend Requests ({friendRequests.length})
-                        </h3>
-                        <div className="space-y-2 px-3">
-                          {friendRequests.map(({ request, from_user }) => (
-                            <div key={request.id} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <UserAvatar user={from_user} size="sm" className="flex-shrink-0" />
-                                <p className="font-semibold text-white text-xs truncate">{from_user.name}</p>
-                              </div>
-                              <div className="flex gap-1 flex-shrink-0">
-                                <Button
-                                  onClick={() => handleAcceptRequest(request.id)}
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white h-6 w-6 p-0 text-xs"
-                                >
-                                  ✓
-                                </Button>
-                                <Button
-                                  onClick={() => handleRejectRequest(request.id)}
-                                  size="sm"
-                                  className="bg-red-600 hover:bg-red-700 text-white h-6 w-6 p-0 text-xs"
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Friends List */}
                     <div>
                       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
@@ -699,41 +664,6 @@ export default function MainLayout({ user, setUser, children }) {
           <div className="pt-4">
             {activeTab === 'friends' ? (
               <div>
-                {/* Friend Requests */}
-                {friendRequests.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
-                      Friend Requests ({friendRequests.length})
-                    </h3>
-                    <div className="space-y-2 px-3">
-                      {friendRequests.map(({ request, from_user }) => (
-                        <div key={request.id} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <UserAvatar user={from_user} size="sm" className="flex-shrink-0" />
-                            <p className="font-semibold text-white text-xs truncate">{from_user.name}</p>
-                          </div>
-                          <div className="flex gap-1 flex-shrink-0">
-                            <Button
-                              onClick={() => handleAcceptRequest(request.id)}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white h-6 w-6 p-0 text-xs"
-                            >
-                              ✓
-                            </Button>
-                            <Button
-                              onClick={() => handleRejectRequest(request.id)}
-                              size="sm"
-                              className="bg-red-600 hover:bg-red-700 text-white h-6 w-6 p-0 text-xs"
-                            >
-                              ✕
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Friends List */}
                 <div>
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">

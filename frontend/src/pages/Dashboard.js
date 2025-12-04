@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { MessageCircle, Instagram, Twitter, Menu, Users, Bell, X } from 'lucide-react';
+import { MessageCircle, Instagram, Twitter, Menu, Users, Bell, X, Check } from 'lucide-react';
 import { axiosInstance } from '../api/axiosInstance';
+import { toast } from 'sonner';
+import UserAvatar from '../components/UserAvatar';
 
 export default function Dashboard({ user, onStartChat, onManageInterests, onOpenMenu }) {
   const navigate = useNavigate();
@@ -11,6 +13,9 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
   const [interests, setInterests] = useState([]);
   const [newInterest, setNewInterest] = useState('');
   const [isAddingInterest, setIsAddingInterest] = useState(false);
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const friendRequestsRef = useRef(null);
 
   useEffect(() => {
     // Load user interests from all three sources
@@ -21,6 +26,54 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
     ];
     setInterests(allInterests);
   }, [user]);
+
+  // Load friend requests
+  useEffect(() => {
+    const loadFriendRequests = async () => {
+      try {
+        const response = await axiosInstance.get('/friend-requests/pending');
+        if (response.data.friend_requests) {
+          setFriendRequests(response.data.friend_requests);
+        }
+      } catch (error) {
+        console.error('Error loading friend requests:', error);
+      }
+    };
+    loadFriendRequests();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (friendRequestsRef.current && !friendRequestsRef.current.contains(event.target)) {
+        setShowFriendRequests(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      await axiosInstance.post(`/friend-requests/${requestId}/accept`);
+      setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
+      toast.success('Friend request accepted!');
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      toast.error('Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+    try {
+      await axiosInstance.post(`/friend-requests/${requestId}/reject`);
+      setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
+      toast.info('Friend request declined');
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to decline request');
+    }
+  };
 
   const handleStartChat = () => {
     // Use onStartChat prop if provided, otherwise navigate
@@ -97,9 +150,66 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
           <span className="text-white font-semibold text-lg">New Chat</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-            <Users className="h-5 w-5" />
-          </button>
+          {/* Friend Requests Icon with Dropdown */}
+          <div className="relative" ref={friendRequestsRef}>
+            <button 
+              onClick={() => setShowFriendRequests(!showFriendRequests)}
+              className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors relative"
+            >
+              <Users className="h-5 w-5" />
+              {friendRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                  {friendRequests.length}
+                </span>
+              )}
+            </button>
+            
+            {/* Friend Requests Dropdown */}
+            {showFriendRequests && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#2b3544] rounded-lg shadow-xl border border-gray-700/50 z-[80] overflow-hidden">
+                <div className="flex items-center gap-2 p-3 border-b border-gray-700/50">
+                  <Users className="h-5 w-5 text-white" />
+                  <h3 className="text-white font-semibold">Friend Requests</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {friendRequests.length > 0 ? (
+                    friendRequests.map(({ request, from_user }) => (
+                      <div key={request.id} className="p-3 border-b border-gray-700/30 last:border-b-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <UserAvatar user={from_user} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white text-sm truncate">{from_user.name}</p>
+                            <p className="text-gray-400 text-xs">sent you a friend request.</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleAcceptRequest(request.id)}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 h-7"
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            onClick={() => handleRejectRequest(request.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1 h-7"
+                          >
+                            Ignore
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-400 text-sm">
+                      No pending friend requests
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <button className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors">
             <Bell className="h-5 w-5" />
           </button>
