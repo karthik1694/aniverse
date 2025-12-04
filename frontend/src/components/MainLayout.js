@@ -356,7 +356,7 @@ export default function MainLayout({ user, setUser, children }) {
 
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
+        <div className="md:hidden fixed inset-0 z-[70]">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}

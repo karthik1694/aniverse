@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { MessageCircle, Instagram, Twitter, Menu, Users, Bell } from 'lucide-react';
+import { MessageCircle, Instagram, Twitter, Menu, Users, Bell, X } from 'lucide-react';
 import { axiosInstance } from '../api/axiosInstance';
 
 export default function Dashboard({ user, onStartChat, onManageInterests, onOpenMenu }) {
@@ -84,22 +84,23 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
 
   return (
     <div className="fixed inset-0 md:relative md:h-full bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex flex-col overflow-auto z-[60] md:z-auto">
-      {/* Mobile Header - Like Chitchat.gg */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-800/30">
+      {/* Header - Mobile and Desktop */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/30">
         <div className="flex items-center gap-3">
+          {/* Menu button - Mobile only */}
           <button
             onClick={onOpenMenu}
-            className="text-gray-400 hover:text-white p-1"
+            className="md:hidden text-gray-400 hover:text-white p-1"
           >
             <Menu className="h-6 w-6" />
           </button>
           <span className="text-white font-semibold text-lg">New Chat</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="text-gray-400 hover:text-white p-1">
+          <button className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors">
             <Users className="h-5 w-5" />
           </button>
-          <button className="text-gray-400 hover:text-white p-1">
+          <button className="text-gray-400 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors">
             <Bell className="h-5 w-5" />
           </button>
         </div>
@@ -160,9 +161,15 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
                     interests.map((interest, index) => (
                       <Badge
                         key={index}
-                        className="bg-[#2a3441] text-white border-0 px-3 py-1.5 text-sm rounded-md"
+                        className="bg-[#2a3441] text-white border-0 px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 group"
                       >
                         {interest}
+                        <button
+                          onClick={() => handleRemoveInterest(interest)}
+                          className="text-gray-400 hover:text-red-400 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       </Badge>
                     ))
                   ) : (
@@ -268,16 +275,6 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              {/* Video Button */}
-              <Button
-                onClick={handleStartChat}
-                className="w-12 h-12 p-0 bg-[#2a3441] hover:bg-[#3a4451] text-white rounded-lg border border-gray-600/30 flex items-center justify-center"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </Button>
-              
               {/* Main Chat Button */}
               <Button
                 onClick={handleStartChat}
