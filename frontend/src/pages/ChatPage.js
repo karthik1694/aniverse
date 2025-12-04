@@ -516,7 +516,7 @@ export default function ChatPage({ user, openSettings }) {
 
   return (
     <>
-      <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] relative">
+      <div className="fixed inset-0 md:relative md:h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] z-[60] md:z-auto">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Floating Particles */}

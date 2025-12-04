@@ -189,7 +189,7 @@ const MatchingScreen = ({
   };
 
   return (
-    <div className="h-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] relative overflow-hidden">
+    <div className="fixed inset-0 md:relative md:h-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] overflow-hidden z-[60] md:z-auto">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Floating Particles */}

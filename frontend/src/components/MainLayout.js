@@ -318,29 +318,37 @@ export default function MainLayout({ user, setUser, children }) {
       
       <div className="flex-1 flex overflow-hidden">
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-b border-gray-800/50 z-50 px-4 py-3">
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#1a1a2e]/95 backdrop-blur-sm border-b border-gray-800/50 z-50 px-3 py-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white p-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-            <h1 className="text-lg font-bold text-white">
-              otakucafe<span className="text-sm text-gray-400">.fun</span>
-            </h1>
-          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              className="text-gray-400 hover:text-white p-2"
+              className="text-gray-400 hover:text-white p-1.5"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h1 className="text-base font-semibold text-white">
+              New Chat
+            </h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-1.5"
+              onClick={() => setActiveTab('friends')}
+            >
+              <Users className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-1.5"
               onClick={() => setShowSettingsModal(true)}
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -353,11 +361,11 @@ export default function MainLayout({ user, setUser, children }) {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-r border-gray-800/50 flex flex-col">
+          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-[#1a1a2e]/98 backdrop-blur-sm border-r border-gray-800/50 flex flex-col">
             {/* Mobile Sidebar Content - Same as desktop sidebar */}
-            <div className="p-4 border-b border-gray-800/50 pt-16">
-              <h1 className="text-xl font-bold text-white">
-                otakucafe<span className="text-sm text-gray-400">.fun</span>
+            <div className="p-3 border-b border-gray-800/50 pt-14">
+              <h1 className="text-lg font-bold text-white">
+                otakucafe<span className="text-xs text-gray-400">.fun</span>
               </h1>
             </div>
 
@@ -908,7 +916,7 @@ export default function MainLayout({ user, setUser, children }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden flex flex-col pt-16 md:pt-0">
+      <div className="flex-1 overflow-hidden flex flex-col pt-12 md:pt-0">
         {React.isValidElement(children)
           ? React.cloneElement(children, { openSettings: () => setShowSettingsModal(true) })
           : children}
