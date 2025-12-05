@@ -437,7 +437,7 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
         requestBody: requestBody
       });
       
-      const response = await axiosInstance.post(`/friend-requests/${partner.id}`, requestBody);
+      const response = await axiosInstance.post(`friend-requests/${partner.id}`, requestBody);
       console.log('✅ Friend request response:', response.data);
       setFriendRequestSent(true); // Mark as sent
       toast.success('👋 Friend request sent!');

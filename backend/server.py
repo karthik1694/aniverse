@@ -3970,6 +3970,8 @@ app.include_router(api_router)
 # CORS Configuration for production deployment
 allowed_origins = [
     "https://aniverse-kkvz.vercel.app",  # Production Vercel domain
+    "https://aniconnect.vercel.app",  # Alternative Vercel domain
+    "https://*.vercel.app",  # All Vercel preview deployments
     "http://localhost:3000",  # Local development
     "http://127.0.0.1:3000",  # Local development alternative
     "http://localhost:3001",  # Local development (alt port)
@@ -3978,6 +3980,7 @@ allowed_origins = [
     "http://127.0.0.1:3001",  # Local development alternative
     "http://127.0.0.1:3002",  # Local development alternative
     "http://127.0.0.1:3003",  # Local development alternative
+    "*",  # Allow all origins as fallback (for debugging)
 ]
 
 # Add any additional origins from environment variable

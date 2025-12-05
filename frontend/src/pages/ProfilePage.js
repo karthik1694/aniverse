@@ -93,7 +93,7 @@ export default function ProfilePage({ user }) {
 
   const checkFriendshipStatus = async () => {
     try {
-      const response = await axiosInstance.get(`/check-friendship/${friendId}`);
+      const response = await axiosInstance.get(`check-friendship/${friendId}`);
       setIsFriend(response.data.is_friend);
     } catch (error) {
       console.error('Error checking friendship status:', error);
@@ -106,7 +106,7 @@ export default function ProfilePage({ user }) {
 
   const handleUnfriend = async () => {
     try {
-      await axiosInstance.delete(`/friends/${friendId}`);
+      await axiosInstance.delete(`friends/${friendId}`);
       toast.success(`Unfriended ${profile.name}`);
       setIsFriend(false);
       navigate('/chat');
@@ -128,7 +128,7 @@ export default function ProfilePage({ user }) {
         isAnonymous: user?.isAnonymous
       });
       
-      await axiosInstance.post(`/friend-requests/${friendId}`, requestBody);
+      await axiosInstance.post(`friend-requests/${friendId}`, requestBody);
       toast.success('Friend request sent!');
       setFriendRequestSent(true);
     } catch (error) {

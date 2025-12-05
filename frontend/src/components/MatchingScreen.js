@@ -30,20 +30,27 @@ const MatchingScreen = ({
   const friendRequestsRef = useRef(null);
   const notificationsRef = useRef(null);
 
-  // Load friend requests
+  // Load friend requests with refresh
   useEffect(() => {
     const loadFriendRequests = async () => {
       try {
-        const response = await axiosInstance.get('/friend-requests/pending');
-        if (response.data.friend_requests) {
-          setFriendRequests(response.data.friend_requests);
-        }
+        // For anonymous users, pass user_id as query parameter
+        const params = user?.isAnonymous ? { user_id: user?.id } : {};
+        const response = await axiosInstance.get('friend-requests', { params });
+        console.log('📥 Friend requests loaded:', response.data);
+        setFriendRequests(response.data || []);
       } catch (error) {
-        console.error('Error loading friend requests:', error);
+        console.error('❌ Error loading friend requests:', error);
       }
     };
-    loadFriendRequests();
-  }, []);
+    
+    if (user?.id) {
+      loadFriendRequests();
+      // Refresh every 30 seconds to catch any missed real-time notifications
+      const interval = setInterval(loadFriendRequests, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -63,7 +70,7 @@ const MatchingScreen = ({
     try {
       // Always include user data in the request as a fallback for authentication
       const requestBody = { user_data: user };
-      await axiosInstance.post(`/friend-requests/${requestId}/accept`, requestBody);
+      await axiosInstance.post(`friend-requests/${requestId}/accept`, requestBody);
       setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
       toast.success('Friend request accepted!');
     } catch (error) {
@@ -76,7 +83,7 @@ const MatchingScreen = ({
     try {
       // Always include user data in the request as a fallback for authentication
       const requestBody = { user_data: user };
-      await axiosInstance.post(`/friend-requests/${requestId}/reject`, requestBody);
+      await axiosInstance.post(`friend-requests/${requestId}/reject`, requestBody);
       setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
       toast.info('Friend request declined');
     } catch (error) {

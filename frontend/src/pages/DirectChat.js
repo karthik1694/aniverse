@@ -76,7 +76,7 @@ export default function DirectChat({ user }) {
   const markMessagesAsRead = async () => {
     try {
       const requestBody = user?.isAnonymous ? { user_data: user } : {};
-      await axiosInstance.post(`/mark-messages-read/${friendId}`, requestBody);
+      await axiosInstance.post(`mark-messages-read/${friendId}`, requestBody);
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
@@ -85,7 +85,7 @@ export default function DirectChat({ user }) {
   const checkFriendshipStatus = async () => {
     try {
       const params = user?.isAnonymous ? { user_id: user.id } : {};
-      const response = await axiosInstance.get(`/check-friendship/${friendId}`, { params });
+      const response = await axiosInstance.get(`check-friendship/${friendId}`, { params });
       setIsFriend(response.data.is_friend);
       console.log('Friendship status:', response.data.is_friend ? 'Friend' : 'Non-friend');
     } catch (error) {
@@ -144,7 +144,7 @@ export default function DirectChat({ user }) {
   const loadMessages = async () => {
     try {
       const params = user?.isAnonymous ? { user_id: user.id } : {};
-      const response = await axiosInstance.get(`/chat/history/${friendId}`, { params });
+      const response = await axiosInstance.get(`chat/history/${friendId}`, { params });
       let historyMessages = response.data;
       
       // Handle different response formats
@@ -308,7 +308,7 @@ export default function DirectChat({ user }) {
   const handleDeleteChatHistory = async () => {
     setShowDropdown(false);
     try {
-      await axiosInstance.delete(`/chat/history/${friendId}`);
+      await axiosInstance.delete(`chat/history/${friendId}`);
       setMessages([]);
       messageIdsRef.current.clear();
       toast.success('Chat history deleted');
@@ -322,7 +322,7 @@ export default function DirectChat({ user }) {
   const handleUnfriend = async () => {
     setShowDropdown(false);
     try {
-      await axiosInstance.delete(`/friends/${friendId}`);
+      await axiosInstance.delete(`friends/${friendId}`);
       toast.success(`Unfriended ${friend.name}`);
       setShowDropdown(false);
       cleanup();

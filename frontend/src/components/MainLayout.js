@@ -28,6 +28,12 @@ export default function MainLayout({ user, setUser, children }) {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  
+  // Use ref to store current user for socket callbacks
+  const userRef = React.useRef(user);
+  React.useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Helper function to check if a user is online based on real-time data
   const isUserOnline = (userId) => {
@@ -118,15 +124,23 @@ export default function MainLayout({ user, setUser, children }) {
     });
     
     // Listen for real-time friend requests
-    newSocket.on('friend_request_received', (data) => {
+    newSocket.on('friend_request_received', async (data) => {
       console.log('📨 Real-time friend request received:', data);
       toast.info(`👋 ${data.from_user.name} sent you a friend request!`);
-      // Reload friend requests to show the new one
-      loadFriendRequests();
+      // Reload friend requests using current user from ref
+      try {
+        const currentUser = userRef.current;
+        const params = currentUser?.isAnonymous ? { user_id: currentUser?.id } : {};
+        const response = await axiosInstance.get('friend-requests', { params });
+        console.log('✅ Friend requests reloaded:', response.data);
+        setFriendRequests(response.data);
+      } catch (error) {
+        console.error('❌ Error reloading friend requests:', error);
+      }
     });
     
     // Listen for friend request accepted (when someone accepts your request)
-    newSocket.on('friend_request_accepted', (data) => {
+    newSocket.on('friend_request_accepted', async (data) => {
       console.log('✅ Friend request accepted:', data);
       toast.success(`🎉 ${data.friend.name} accepted your friend request!`);
       // Add to notifications
@@ -138,8 +152,15 @@ export default function MainLayout({ user, setUser, children }) {
         timestamp: new Date().toISOString(),
         read: false
       }, ...prev]);
-      // Reload friends list
-      loadFriends();
+      // Reload friends list using current user from ref
+      try {
+        const currentUser = userRef.current;
+        const params = currentUser?.isAnonymous ? { user_id: currentUser?.id } : {};
+        const response = await axiosInstance.get('friends', { params });
+        setFriends(response.data);
+      } catch (error) {
+        console.error('❌ Error reloading friends:', error);
+      }
     });
 
     setSocket(newSocket);
