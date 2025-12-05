@@ -87,6 +87,7 @@ class User(BaseModel):
     favorite_characters: List[str] = []
     premium: bool = False
     username_changes: int = 0  # Track number of username changes (max 3)
+    isAnonymous: bool = False  # Track if user is anonymous
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserSession(BaseModel):
@@ -841,9 +842,9 @@ async def send_friend_request(to_user_id: str, request: Request):
     user = await get_current_user(request)
     logging.info(f"🔑 get_current_user result: {user.name if user else 'None'}")
     
-    # If no authenticated user, check for anonymous user data in request body
+    # If no authenticated user, check for user data in request body (fallback authentication)
     if not user:
-        logging.info("🟡 No authenticated user, checking request body for anonymous user...")
+        logging.info("🟡 No authenticated user from session, checking request body for user data...")
         
         if not body:
             logging.error("❌ No request body and no authenticated user")
@@ -856,32 +857,34 @@ async def send_friend_request(to_user_id: str, request: Request):
             logging.error("❌ No user_data in request body")
             raise HTTPException(status_code=401, detail="Authentication required")
         
-        if not user_data.get('isAnonymous'):
-            logging.error("❌ user_data exists but isAnonymous is not True")
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # For anonymous users, ensure they exist in the database
+        # Get user ID from request body
         user_id = user_data.get('id')
-        logging.info(f"✅ Anonymous user detected: {user_data.get('name')} (ID: {user_id})")
-        
         if not user_id:
-            logging.error("❌ Anonymous user data missing ID")
+            logging.error("❌ User data missing ID")
             raise HTTPException(status_code=401, detail="Invalid user data")
+        
+        is_anonymous = user_data.get('isAnonymous', False)
+        logging.info(f"✅ User from request body: {user_data.get('name')} (ID: {user_id}, anonymous: {is_anonymous})")
         
         try:
             existing_user = await db.users.find_one({"id": user_id}, {"_id": 0})
             
             if not existing_user:
-                # Create anonymous user in database
-                user_dict = user_data.copy()
-                if 'created_at' not in user_dict:
-                    user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
-                elif isinstance(user_dict.get('created_at'), datetime):
-                    user_dict['created_at'] = user_dict['created_at'].isoformat()
-                await db.users.insert_one(user_dict)
-                logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+                if is_anonymous:
+                    # Create anonymous user in database
+                    user_dict = user_data.copy()
+                    if 'created_at' not in user_dict:
+                        user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                    elif isinstance(user_dict.get('created_at'), datetime):
+                        user_dict['created_at'] = user_dict['created_at'].isoformat()
+                    await db.users.insert_one(user_dict)
+                    logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+                else:
+                    # Non-anonymous user not found in database
+                    logging.error(f"❌ Non-anonymous user not found in DB: {user_id}")
+                    raise HTTPException(status_code=401, detail="User not found. Please log in again.")
             else:
-                # Update anonymous user data (in case interests were added)
+                # Update user data (in case interests were added)
                 user_dict = user_data.copy()
                 if isinstance(user_dict.get('created_at'), datetime):
                     user_dict['created_at'] = user_dict['created_at'].isoformat()
@@ -889,14 +892,16 @@ async def send_friend_request(to_user_id: str, request: Request):
                     {"id": user_id},
                     {"$set": user_dict}
                 )
-                logging.info(f"✅ Updated anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+                logging.info(f"✅ Updated user in DB: {user_data.get('name')} (ID: {user_id})")
             
             # Create a User object for validation
             user = User(**user_data)
-            logging.info(f"✅ Anonymous user authenticated for friend request: {user.name}")
+            logging.info(f"✅ User authenticated via request body for friend request: {user.name}")
+        except HTTPException:
+            raise
         except Exception as e:
-            logging.error(f"❌ Error handling anonymous user in database: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Failed to process anonymous user")
+            logging.error(f"❌ Error handling user in database: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to process user")
     
     # Check if trying to send request to self
     if user.id == to_user_id:
@@ -1031,7 +1036,7 @@ async def accept_friend_request(request_id: str, request: Request):
     # Try to get authenticated user
     user = await get_current_user(request)
     
-    # If no authenticated user, check for anonymous user data in request body
+    # If no authenticated user, check for user data in request body (fallback authentication)
     if not user:
         if not body or not body.get('user_data'):
             logging.error("❌ No authenticated user and no user_data in body")
@@ -1039,15 +1044,30 @@ async def accept_friend_request(request_id: str, request: Request):
         
         user_data = body.get('user_data')
         user_id = user_data.get('id')
+        is_anonymous = user_data.get('isAnonymous', False)
         
-        # Verify user exists
+        if not user_id:
+            logging.error("❌ User data missing ID")
+            raise HTTPException(status_code=401, detail="Invalid user data")
+        
+        # Verify user exists or create if anonymous
         user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user_doc:
-            logging.error(f"❌ User not found: {user_id}")
-            raise HTTPException(status_code=404, detail="User not found")
+            if is_anonymous:
+                # Create anonymous user in database
+                user_dict = user_data.copy()
+                if 'created_at' not in user_dict:
+                    user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                elif isinstance(user_dict.get('created_at'), datetime):
+                    user_dict['created_at'] = user_dict['created_at'].isoformat()
+                await db.users.insert_one(user_dict)
+                logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+            else:
+                logging.error(f"❌ User not found: {user_id}")
+                raise HTTPException(status_code=404, detail="User not found")
         
-        user = User(**user_doc)
-        logging.info(f"✅ Anonymous user accepting request: {user.name}")
+        user = User(**user_data)
+        logging.info(f"✅ User authenticated via request body for accepting request: {user.name}")
     
     friend_request = await db.friend_requests.find_one({"id": request_id}, {"_id": 0})
     if not friend_request:
@@ -1121,7 +1141,7 @@ async def reject_friend_request(request_id: str, request: Request):
     # Try to get authenticated user
     user = await get_current_user(request)
     
-    # If no authenticated user, check for anonymous user data in request body
+    # If no authenticated user, check for user data in request body (fallback authentication)
     if not user:
         if not body or not body.get('user_data'):
             logging.error("❌ No authenticated user and no user_data in body")
@@ -1129,15 +1149,30 @@ async def reject_friend_request(request_id: str, request: Request):
         
         user_data = body.get('user_data')
         user_id = user_data.get('id')
+        is_anonymous = user_data.get('isAnonymous', False)
         
-        # Verify user exists
+        if not user_id:
+            logging.error("❌ User data missing ID")
+            raise HTTPException(status_code=401, detail="Invalid user data")
+        
+        # Verify user exists or create if anonymous
         user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user_doc:
-            logging.error(f"❌ User not found: {user_id}")
-            raise HTTPException(status_code=404, detail="User not found")
+            if is_anonymous:
+                # Create anonymous user in database
+                user_dict = user_data.copy()
+                if 'created_at' not in user_dict:
+                    user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                elif isinstance(user_dict.get('created_at'), datetime):
+                    user_dict['created_at'] = user_dict['created_at'].isoformat()
+                await db.users.insert_one(user_dict)
+                logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+            else:
+                logging.error(f"❌ User not found: {user_id}")
+                raise HTTPException(status_code=404, detail="User not found")
         
-        user = User(**user_doc)
-        logging.info(f"✅ Anonymous user rejecting request: {user.name}")
+        user = User(**user_data)
+        logging.info(f"✅ User authenticated via request body for rejecting request: {user.name}")
     
     friend_request = await db.friend_requests.find_one({"id": request_id}, {"_id": 0})
     if not friend_request:

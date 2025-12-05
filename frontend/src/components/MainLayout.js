@@ -262,8 +262,8 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      // For anonymous users, include user data in the request
-      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      // Always include user data in the request as a fallback for authentication
+      const requestBody = { user_data: user };
       await axiosInstance.post(`friend-requests/${requestId}/accept`, requestBody);
       toast.success('Friend request accepted!');
       loadFriends();
@@ -276,8 +276,8 @@ export default function MainLayout({ user, setUser, children }) {
 
   const handleRejectRequest = async (requestId) => {
     try {
-      // For anonymous users, include user data in the request
-      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      // Always include user data in the request as a fallback for authentication
+      const requestBody = { user_data: user };
       await axiosInstance.post(`friend-requests/${requestId}/reject`, requestBody);
       toast.success('Friend request rejected');
       loadFriendRequests();

@@ -408,24 +408,16 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
     if (!partner) return;
     
     try {
-      // For anonymous users, include user data in the request
-      let requestBody = {};
+      // Always include user data in the request as a fallback for authentication
+      // This ensures friend requests work even if session cookies aren't sent properly
+      const requestBody = { user_data: user };
       
-      if (user?.isAnonymous) {
-        requestBody = { user_data: user };
-        console.log('🔵 Sending anonymous friend request:', {
-          partner_id: partner.id,
-          user_id: user?.id,
-          user_name: user?.name,
-          isAnonymous: user?.isAnonymous,
-          requestBody: JSON.stringify(requestBody)
-        });
-      } else {
-        console.log('🟢 Sending authenticated friend request:', {
-          partner_id: partner.id,
-          user_id: user?.id
-        });
-      }
+      console.log('🔵 Sending friend request:', {
+        partner_id: partner.id,
+        user_id: user?.id,
+        user_name: user?.name,
+        isAnonymous: user?.isAnonymous
+      });
       
       const response = await axiosInstance.post(`/friend-requests/${partner.id}`, requestBody);
       console.log('✅ Friend request response:', response.data);
@@ -513,6 +505,7 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
           onCancel={handleCancelMatching}
           onBack={() => navigate('/dashboard')}
           onOpenMenu={openMenu}
+          user={user}
           notifications={notifications}
           clearNotification={clearNotification}
           markNotificationRead={markNotificationRead}

@@ -14,6 +14,7 @@ const MatchingScreen = ({
   onCancel, 
   onBack,
   onOpenMenu,
+  user,
   notifications = [],
   clearNotification,
   markNotificationRead,
@@ -60,7 +61,9 @@ const MatchingScreen = ({
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      await axiosInstance.post(`/friend-requests/${requestId}/accept`);
+      // Always include user data in the request as a fallback for authentication
+      const requestBody = { user_data: user };
+      await axiosInstance.post(`/friend-requests/${requestId}/accept`, requestBody);
       setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
       toast.success('Friend request accepted!');
     } catch (error) {
@@ -71,7 +74,9 @@ const MatchingScreen = ({
 
   const handleRejectRequest = async (requestId) => {
     try {
-      await axiosInstance.post(`/friend-requests/${requestId}/reject`);
+      // Always include user data in the request as a fallback for authentication
+      const requestBody = { user_data: user };
+      await axiosInstance.post(`/friend-requests/${requestId}/reject`, requestBody);
       setFriendRequests(prev => prev.filter(r => r.request.id !== requestId));
       toast.info('Friend request declined');
     } catch (error) {

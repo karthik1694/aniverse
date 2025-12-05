@@ -118,14 +118,14 @@ export default function ProfilePage({ user }) {
 
   const handleSendFriendRequest = async () => {
     try {
-      // For anonymous users, include user data in the request
-      const requestBody = user?.isAnonymous ? { user_data: user } : {};
+      // Always include user data in the request as a fallback for authentication
+      const requestBody = { user_data: user };
       
       console.log('Sending friend request from profile:', {
         friend_id: friendId,
-        is_anonymous: user?.isAnonymous,
         user_id: user?.id,
-        has_user_data: !!requestBody.user_data
+        user_name: user?.name,
+        isAnonymous: user?.isAnonymous
       });
       
       await axiosInstance.post(`/friend-requests/${friendId}`, requestBody);
