@@ -112,7 +112,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">9. Contact Us</h2>
             <p className="leading-relaxed">
-              If you have any questions about this Privacy Policy, please contact us at privacy@otakucafe.fun
+              If you have any questions about this Privacy Policy, please contact us at developer.otakucafe@gmail.com
             </p>
           </section>
         </div>

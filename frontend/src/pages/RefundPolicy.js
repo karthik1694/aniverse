@@ -95,7 +95,7 @@ export default function RefundPolicy() {
               If premium features are available and you need a refund:
             </p>
             <ol className="list-decimal list-inside space-y-2 ml-4">
-              <li>Contact our support team at support@otakucafe.fun</li>
+              <li>Contact our support team at developer.otakucafe@gmail.com</li>
               <li>Provide your account email and transaction details</li>
               <li>Explain the reason for your refund request</li>
               <li>We will review and respond within 3-5 business days</li>
@@ -120,7 +120,7 @@ export default function RefundPolicy() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">8. Contact Us</h2>
             <p className="leading-relaxed">
-              For any questions about refunds or billing, please contact us at billing@otakucafe.fun
+              For any questions about refunds or billing, please contact us at developer.otakucafe@gmail.com
             </p>
           </section>
 

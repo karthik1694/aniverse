@@ -99,7 +99,7 @@ export default function CommunityGuidelines() {
               <li>Use the "Report" button available in chat and profiles</li>
               <li>Provide as much detail as possible about the violation</li>
               <li>Do not engage with the violator - report and block them</li>
-              <li>Contact us at moderation@otakucafe.fun for serious concerns</li>
+              <li>Contact us at developer.otakucafe@gmail.com for serious concerns</li>
             </ul>
           </section>
 

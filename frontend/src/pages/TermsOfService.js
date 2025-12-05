@@ -99,7 +99,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">9. Contact Information</h2>
             <p className="leading-relaxed">
-              If you have any questions about these Terms, please contact us at support@otakucafe.fun
+              If you have any questions about these Terms, please contact us at developer.otakucafe@gmail.com
             </p>
           </section>
         </div>

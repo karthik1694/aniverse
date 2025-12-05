@@ -37,10 +37,10 @@ export default function ContactUs() {
                     <h3 className="font-semibold text-white">General Support</h3>
                   </div>
                   <a 
-                    href="mailto:support@otakucafe.fun" 
+                    href="mailto:developer.otakucafe@gmail.com"
                     className="text-cyan-400 hover:text-cyan-300 transition-colors"
                   >
-                    support@otakucafe.fun
+                    developer.otakucafe@gmail.com
                   </a>
                   <p className="text-gray-400 text-sm mt-2">For general inquiries and help</p>
                 </div>
@@ -54,10 +54,10 @@ export default function ContactUs() {
                     <h3 className="font-semibold text-white">Billing & Refunds</h3>
                   </div>
                   <a 
-                    href="mailto:billing@otakucafe.fun" 
+                    href="mailto:developer.otakucafe@gmail.com"
                     className="text-cyan-400 hover:text-cyan-300 transition-colors"
                   >
-                    billing@otakucafe.fun
+                    developer.otakucafe@gmail.com
                   </a>
                   <p className="text-gray-400 text-sm mt-2">For payment and subscription issues</p>
                 </div>
@@ -71,10 +71,10 @@ export default function ContactUs() {
                     <h3 className="font-semibold text-white">Privacy Concerns</h3>
                   </div>
                   <a 
-                    href="mailto:privacy@otakucafe.fun" 
+                    href="mailto:developer.otakucafe@gmail.com"
                     className="text-cyan-400 hover:text-cyan-300 transition-colors"
                   >
-                    privacy@otakucafe.fun
+                    developer.otakucafe@gmail.com
                   </a>
                   <p className="text-gray-400 text-sm mt-2">For data and privacy requests</p>
                 </div>
@@ -88,10 +88,10 @@ export default function ContactUs() {
                     <h3 className="font-semibold text-white">Report Issues</h3>
                   </div>
                   <a 
-                    href="mailto:moderation@otakucafe.fun" 
+                    href="mailto:developer.otakucafe@gmail.com"
                     className="text-cyan-400 hover:text-cyan-300 transition-colors"
                   >
-                    moderation@otakucafe.fun
+                    developer.otakucafe@gmail.com
                   </a>
                   <p className="text-gray-400 text-sm mt-2">For reporting violations or concerns</p>
                 </div>
