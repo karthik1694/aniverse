@@ -10,6 +10,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CommunityGuidelines from "./pages/CommunityGuidelines";
 import RefundPolicy from "./pages/RefundPolicy";
+import ContactUs from "./pages/ContactUs";
 import MainLayout from "./components/MainLayout";
 import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
 import GenderSelectionModal from "./components/GenderSelectionModal";
@@ -275,6 +276,7 @@ function AuthWrapper() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/guidelines" element={<CommunityGuidelines />} />
       <Route path="/refund" element={<RefundPolicy />} />
+      <Route path="/contact" element={<ContactUs />} />
       <Route
         path="/profile-setup"
         element={user ? <ProfileSetup user={user} setUser={setUser} /> : <Navigate to="/" />}

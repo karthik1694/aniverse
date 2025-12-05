@@ -461,6 +461,9 @@ export default function LandingPage() {
               <a href="/refund" className="text-gray-400 hover:text-white transition-colors">
                 Refund Policy
               </a>
+              <a href="/contact" className="text-gray-400 hover:text-white transition-colors">
+                Contact Us
+              </a>
             </div>
 
             {/* Social Icons */}
