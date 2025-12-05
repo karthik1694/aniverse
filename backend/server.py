@@ -828,142 +828,154 @@ async def get_friends(request: Request):
 
 @api_router.post("/friend-requests/{to_user_id}")
 async def send_friend_request(to_user_id: str, request: Request):
-    logging.info(f"🔵 Friend request endpoint called: to_user_id={to_user_id}")
-    
-    # Read request body FIRST (can only be read once)
-    body = None
     try:
-        body = await request.json()
-        logging.info(f"📝 Request body received: {json.dumps(body, default=str)[:200]}")
-    except Exception as e:
-        logging.info(f"ℹ️ No JSON body in request: {e}")
-    
-    # Try to get authenticated user
-    user = await get_current_user(request)
-    logging.info(f"🔑 get_current_user result: {user.name if user else 'None'}")
-    
-    # If no authenticated user, check for user data in request body (fallback authentication)
-    if not user:
-        logging.info("🟡 No authenticated user from session, checking request body for user data...")
+        logging.info(f"🔵 Friend request endpoint called: to_user_id={to_user_id}")
         
-        if not body:
-            logging.error("❌ No request body and no authenticated user")
-            raise HTTPException(status_code=401, detail="Authentication required")
+        # Check if database is available
+        if db is None:
+            logging.error("❌ Database not available for friend request")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
-        user_data = body.get('user_data')
-        logging.info(f"👤 user_data from body: {user_data.get('name') if user_data else 'None'}")
-        
-        if not user_data:
-            logging.error("❌ No user_data in request body")
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # Get user ID from request body
-        user_id = user_data.get('id')
-        if not user_id:
-            logging.error("❌ User data missing ID")
-            raise HTTPException(status_code=401, detail="Invalid user data")
-        
-        is_anonymous = user_data.get('isAnonymous', False)
-        logging.info(f"✅ User from request body: {user_data.get('name')} (ID: {user_id}, anonymous: {is_anonymous})")
-        
+        # Read request body FIRST (can only be read once)
+        body = None
         try:
-            existing_user = await db.users.find_one({"id": user_id}, {"_id": 0})
-            
-            if not existing_user:
-                if is_anonymous:
-                    # Create anonymous user in database
-                    user_dict = user_data.copy()
-                    if 'created_at' not in user_dict:
-                        user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
-                    elif isinstance(user_dict.get('created_at'), datetime):
-                        user_dict['created_at'] = user_dict['created_at'].isoformat()
-                    await db.users.insert_one(user_dict)
-                    logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
-                else:
-                    # Non-anonymous user not found in database
-                    logging.error(f"❌ Non-anonymous user not found in DB: {user_id}")
-                    raise HTTPException(status_code=401, detail="User not found. Please log in again.")
-            else:
-                # Update user data (in case interests were added)
-                user_dict = user_data.copy()
-                if isinstance(user_dict.get('created_at'), datetime):
-                    user_dict['created_at'] = user_dict['created_at'].isoformat()
-                await db.users.update_one(
-                    {"id": user_id},
-                    {"$set": user_dict}
-                )
-                logging.info(f"✅ Updated user in DB: {user_data.get('name')} (ID: {user_id})")
-            
-            # Create a User object for validation
-            user = User(**user_data)
-            logging.info(f"✅ User authenticated via request body for friend request: {user.name}")
-        except HTTPException:
-            raise
+            body = await request.json()
+            logging.info(f"📝 Request body received: {json.dumps(body, default=str)[:200]}")
         except Exception as e:
-            logging.error(f"❌ Error handling user in database: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Failed to process user")
-    
-    # Check if trying to send request to self
-    if user.id == to_user_id:
-        raise HTTPException(status_code=400, detail="Cannot send friend request to yourself")
-    
-    # Check if target user exists
-    target_user = await db.users.find_one({"id": to_user_id}, {"_id": 0})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check if already friends
-    existing = await db.friendships.find_one({
-        "$or": [
-            {"user1_id": user.id, "user2_id": to_user_id},
-            {"user1_id": to_user_id, "user2_id": user.id}
-        ]
-    })
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="Already friends")
-    
-    # Check if request already exists (bidirectional)
-    existing_request = await db.friend_requests.find_one({
-        "$or": [
-            {"from_user_id": user.id, "to_user_id": to_user_id, "status": "pending"},
-            {"from_user_id": to_user_id, "to_user_id": user.id, "status": "pending"}
-        ]
-    })
-    
-    if existing_request:
-        if existing_request['from_user_id'] == user.id:
-            raise HTTPException(status_code=400, detail="Request already sent")
-        else:
-            raise HTTPException(status_code=400, detail="This user has already sent you a friend request")
-    
-    friend_request = FriendRequest(
-        from_user_id=user.id,
-        to_user_id=to_user_id
-    )
-    
-    req_dict = friend_request.dict()
-    req_dict['created_at'] = req_dict['created_at'].isoformat()
-    await db.friend_requests.insert_one(req_dict)
-    
-    logging.info(f"✅ Friend request created: {user.name} ({user.id}) -> {to_user_id}")
-    
-    # Send real-time notification to the recipient if they're online
-    if to_user_id in active_users:
-        recipient_sid = active_users[to_user_id]['sid']
-        # Get sender info for notification
-        sender_info = {
-            'request_id': friend_request.id,
-            'from_user': {
-                'id': user.id,
-                'name': user.name,
-                'picture': user.picture
+            logging.info(f"ℹ️ No JSON body in request: {e}")
+        
+        # Try to get authenticated user
+        user = await get_current_user(request)
+        logging.info(f"🔑 get_current_user result: {user.name if user else 'None'}")
+        
+        # If no authenticated user, check for user data in request body (fallback authentication)
+        if not user:
+            logging.info("🟡 No authenticated user from session, checking request body for user data...")
+            
+            if not body:
+                logging.error("❌ No request body and no authenticated user")
+                raise HTTPException(status_code=401, detail="Authentication required")
+            
+            user_data = body.get('user_data')
+            logging.info(f"👤 user_data from body: {user_data.get('name') if user_data else 'None'}")
+            
+            if not user_data:
+                logging.error("❌ No user_data in request body")
+                raise HTTPException(status_code=401, detail="Authentication required")
+            
+            # Get user ID from request body
+            user_id = user_data.get('id')
+            if not user_id:
+                logging.error("❌ User data missing ID")
+                raise HTTPException(status_code=401, detail="Invalid user data")
+            
+            is_anonymous = user_data.get('isAnonymous', False)
+            logging.info(f"✅ User from request body: {user_data.get('name')} (ID: {user_id}, anonymous: {is_anonymous})")
+            
+            try:
+                existing_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+                
+                if not existing_user:
+                    if is_anonymous:
+                        # Create anonymous user in database
+                        user_dict = user_data.copy()
+                        if 'created_at' not in user_dict:
+                            user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                        elif isinstance(user_dict.get('created_at'), datetime):
+                            user_dict['created_at'] = user_dict['created_at'].isoformat()
+                        await db.users.insert_one(user_dict)
+                        logging.info(f"✅ Created anonymous user in DB: {user_data.get('name')} (ID: {user_id})")
+                    else:
+                        # Non-anonymous user not found in database
+                        logging.error(f"❌ Non-anonymous user not found in DB: {user_id}")
+                        raise HTTPException(status_code=401, detail="User not found. Please log in again.")
+                else:
+                    # Update user data (in case interests were added)
+                    user_dict = user_data.copy()
+                    if isinstance(user_dict.get('created_at'), datetime):
+                        user_dict['created_at'] = user_dict['created_at'].isoformat()
+                    await db.users.update_one(
+                        {"id": user_id},
+                        {"$set": user_dict}
+                    )
+                    logging.info(f"✅ Updated user in DB: {user_data.get('name')} (ID: {user_id})")
+                
+                # Create a User object for validation
+                user = User(**user_data)
+                logging.info(f"✅ User authenticated via request body for friend request: {user.name}")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logging.error(f"❌ Error handling user in database: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to process user")
+        
+        # Check if trying to send request to self
+        if user.id == to_user_id:
+            raise HTTPException(status_code=400, detail="Cannot send friend request to yourself")
+        
+        # Check if target user exists
+        target_user = await db.users.find_one({"id": to_user_id}, {"_id": 0})
+        if not target_user:
+            logging.error(f"❌ Target user not found: {to_user_id}")
+            raise HTTPException(status_code=404, detail="User not found. They may have disconnected.")
+        
+        # Check if already friends
+        existing = await db.friendships.find_one({
+            "$or": [
+                {"user1_id": user.id, "user2_id": to_user_id},
+                {"user1_id": to_user_id, "user2_id": user.id}
+            ]
+        })
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Already friends")
+        
+        # Check if request already exists (bidirectional)
+        existing_request = await db.friend_requests.find_one({
+            "$or": [
+                {"from_user_id": user.id, "to_user_id": to_user_id, "status": "pending"},
+                {"from_user_id": to_user_id, "to_user_id": user.id, "status": "pending"}
+            ]
+        })
+        
+        if existing_request:
+            if existing_request['from_user_id'] == user.id:
+                raise HTTPException(status_code=400, detail="Request already sent")
+            else:
+                raise HTTPException(status_code=400, detail="This user has already sent you a friend request")
+        
+        friend_request = FriendRequest(
+            from_user_id=user.id,
+            to_user_id=to_user_id
+        )
+        
+        req_dict = friend_request.dict()
+        req_dict['created_at'] = req_dict['created_at'].isoformat()
+        await db.friend_requests.insert_one(req_dict)
+        
+        logging.info(f"✅ Friend request created: {user.name} ({user.id}) -> {to_user_id}")
+        
+        # Send real-time notification to the recipient if they're online
+        if to_user_id in active_users:
+            recipient_sid = active_users[to_user_id]['sid']
+            # Get sender info for notification
+            sender_info = {
+                'request_id': friend_request.id,
+                'from_user': {
+                    'id': user.id,
+                    'name': user.name,
+                    'picture': user.picture
+                }
             }
-        }
-        await sio.emit('friend_request_received', sender_info, room=recipient_sid)
-        logging.info(f"📨 Real-time friend request notification sent to {to_user_id}")
-    
-    return {"message": "Friend request sent"}
+            await sio.emit('friend_request_received', sender_info, room=recipient_sid)
+            logging.info(f"📨 Real-time friend request notification sent to {to_user_id}")
+        
+        return {"message": "Friend request sent"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"❌ Unexpected error in send_friend_request: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to send friend request: {str(e)}")
 
 @api_router.get("/friend-requests")
 async def get_friend_requests(request: Request):

@@ -405,7 +405,23 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
   };
 
   const handleSendFriendRequest = async () => {
-    if (!partner) return;
+    if (!partner) {
+      console.error('❌ No partner found for friend request');
+      toast.error('No chat partner found');
+      return;
+    }
+    
+    if (!partner.id) {
+      console.error('❌ Partner has no ID:', partner);
+      toast.error('Cannot identify chat partner');
+      return;
+    }
+    
+    if (!user) {
+      console.error('❌ No user found for friend request');
+      toast.error('Please log in to send friend requests');
+      return;
+    }
     
     try {
       // Always include user data in the request as a fallback for authentication
@@ -414,9 +430,11 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       
       console.log('🔵 Sending friend request:', {
         partner_id: partner.id,
+        partner_name: partner.name,
         user_id: user?.id,
         user_name: user?.name,
-        isAnonymous: user?.isAnonymous
+        isAnonymous: user?.isAnonymous,
+        requestBody: requestBody
       });
       
       const response = await axiosInstance.post(`/friend-requests/${partner.id}`, requestBody);
@@ -427,7 +445,8 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       console.error('❌ Friend request error:', {
         status: error.response?.status,
         data: error.response?.data,
-        message: error.message
+        message: error.message,
+        code: error.code
       });
       // Check if already sent or already friends
       if (error.response?.data?.detail?.includes('already sent')) {
@@ -436,6 +455,12 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       } else if (error.response?.data?.detail?.includes('Already friends')) {
         setFriendRequestSent(true);
         toast.info('Already friends with this user');
+      } else if (error.response?.status === 503) {
+        toast.error('Server is temporarily unavailable. Please try again.');
+      } else if (error.response?.status === 404) {
+        toast.error('User not found. They may have disconnected.');
+      } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+        toast.error('Network error. Please check your connection.');
       } else {
         toast.error(error.response?.data?.detail || 'Failed to send friend request');
       }
