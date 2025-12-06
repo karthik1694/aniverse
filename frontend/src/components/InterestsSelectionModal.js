@@ -52,13 +52,13 @@ export default function InterestsSelectionModal({ isOpen, onClose, onComplete })
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] transition-opacity duration-300"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[110] transition-opacity duration-300"
         onClick={onClose}
       />
       
       {/* Modal - slides up from bottom */}
       <div 
-        className={`fixed bottom-0 left-0 right-0 z-[70] transition-transform duration-500 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-[115] transition-transform duration-500 ease-out ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >

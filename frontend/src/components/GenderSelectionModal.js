@@ -21,7 +21,7 @@ export default function GenderSelectionModal({ isOpen, onClose, onGenderSelect }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-3 sm:p-4">
       <div className="bg-gradient-to-br from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-5 sm:p-8 max-w-md w-full shadow-2xl shadow-cyan-500/10 relative max-h-[90vh] overflow-y-auto">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">

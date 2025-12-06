@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import LandingPage from "./pages/LandingPage";
 import ProfileSetup from "./pages/ProfileSetup";
 import ChatPage from "./pages/ChatPage";
@@ -47,6 +48,14 @@ function AuthWrapper() {
     
     return () => clearTimeout(safetyTimeout);
   }, []);
+
+  // Reset modals when user is logged out (becomes null)
+  useEffect(() => {
+    if (user === null) {
+      setShowGenderModal(false);
+      setShowInterestsModal(false);
+    }
+  }, [user]);
 
   const checkAuth = async () => {
     try {
@@ -343,6 +352,7 @@ function App() {
         <AuthWrapper />
       </BrowserRouter>
       <Toaster position="top-center" richColors />
+      <Analytics />
     </div>
   );
 }

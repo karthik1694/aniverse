@@ -318,8 +318,8 @@ export default function MainLayout({ user, setUser, children }) {
       // Check if user is anonymous
       if (isAnonymousUser(user)) {
         setUser(null);
-        navigate('/');
-        toast.success('Logged out successfully');
+        // Force full page reload to ensure clean state (same as OAuth logout)
+        window.location.href = '/';
         return;
       }
       
