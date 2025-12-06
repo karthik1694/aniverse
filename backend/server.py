@@ -603,6 +603,38 @@ async def app_root():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+# Health check endpoint at root level for UptimeRobot and other monitoring services
+# This prevents Render's free instance from sleeping due to inactivity
+@app.get("/healthz")
+async def healthz():
+    """
+    Lightweight health check endpoint for keeping Render free instance awake.
+    UptimeRobot or similar services should ping this every 5 minutes.
+    """
+    try:
+        # Test database connection to keep MongoDB connection alive too
+        if db is not None:
+            await db.admin.command('ping')
+            db_status = "connected"
+        else:
+            db_status = "not_initialized"
+        
+        return {
+            "status": "ok",
+            "database": db_status,
+            "uptime": "active",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.warning(f"Health check - DB ping failed: {e}")
+        # Still return 200 to keep the app awake even if DB has issues
+        return {
+            "status": "ok",
+            "database": "connection_issue",
+            "uptime": "active",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint for deployment monitoring"""
