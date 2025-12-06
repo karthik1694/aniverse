@@ -42,6 +42,7 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [friendRequestSent, setFriendRequestSent] = useState(false); // Track if request was sent to current partner
+    const [sendingFriendRequest, setSendingFriendRequest] = useState(false); // Prevent double-click
   const [showDashboard, setShowDashboard] = useState(true);
   const fileInputRef = useRef(null);
 
@@ -211,10 +212,63 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  // Reset friend request sent flag when partner changes
+  // Reset friend request sent flag when partner changes and check for existing requests
   useEffect(() => {
     setFriendRequestSent(false);
-  }, [partner]);
+    setSendingFriendRequest(false);
+    
+    // Check if there's already a pending friend request with this partner
+    const checkExistingRequest = async () => {
+      if (!partner?.id || !user?.id) return;
+      
+      try {
+        // Check if we already sent a request to this partner or they sent one to us
+        const params = user?.isAnonymous ? { user_id: user?.id } : {};
+        const response = await axiosInstance.get('friend-requests', { params });
+        const pendingRequests = response.data || [];
+        
+        // Check if there's already a request involving this partner
+        const existingRequest = pendingRequests.find(
+          req => req.from_user?.id === partner.id || req.request?.to_user_id === partner.id
+        );
+        
+        if (existingRequest) {
+          console.log('Found existing friend request with partner:', existingRequest);
+          setFriendRequestSent(true);
+        }
+        
+        // Also check sent requests
+        try {
+          const sentResponse = await axiosInstance.get('friend-requests/sent', { params });
+          const sentRequests = sentResponse.data || [];
+          const sentToPartner = sentRequests.find(req => req.to_user_id === partner.id);
+          if (sentToPartner) {
+            console.log('Found sent friend request to partner:', sentToPartner);
+            setFriendRequestSent(true);
+          }
+        } catch (e) {
+          // Endpoint might not exist, that's ok
+        }
+        
+        // Check if already friends
+        try {
+          const friendsResponse = await axiosInstance.get('friends', { params });
+          const friends = friendsResponse.data || [];
+          const isAlreadyFriend = friends.find(f => f.id === partner.id);
+          if (isAlreadyFriend) {
+            console.log('Already friends with partner');
+            setFriendRequestSent(true);
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      } catch (error) {
+        console.log('Could not check existing friend requests:', error.message);
+      }
+    };
+    
+    checkExistingRequest();
+  }, [partner, user]);
 
   const handleStartMatching = () => {
     console.log('Starting matching...', { 
@@ -428,6 +482,14 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       return;
     }
     
+    // Prevent double-click
+    if (sendingFriendRequest || friendRequestSent) {
+      console.log('Friend request already in progress or sent');
+      return;
+    }
+    
+    setSendingFriendRequest(true);
+    
     try {
       // Always include user data in the request as a fallback for authentication
       // This ensures friend requests work even if session cookies aren't sent properly
@@ -454,12 +516,15 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
         code: error.code
       });
       // Check if already sent or already friends
-      if (error.response?.data?.detail?.includes('already sent')) {
+      if (error.response?.data?.detail?.includes('already sent') || error.response?.data?.detail?.includes('Request already sent')) {
         setFriendRequestSent(true);
         toast.info('Friend request already sent');
       } else if (error.response?.data?.detail?.includes('Already friends')) {
         setFriendRequestSent(true);
         toast.info('Already friends with this user');
+      } else if (error.response?.data?.detail?.includes('already sent you')) {
+        setFriendRequestSent(true);
+        toast.info('This user has already sent you a friend request! Check your notifications.');
       } else if (error.response?.status === 503) {
         toast.error('Server is temporarily unavailable. Please try again.');
       } else if (error.response?.status === 404) {
@@ -469,6 +534,8 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       } else {
         toast.error(error.response?.data?.detail || 'Failed to send friend request');
       }
+    } finally {
+      setSendingFriendRequest(false);
     }
   };
 
@@ -646,24 +713,29 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
             <div className="flex gap-0.5 sm:gap-1 md:gap-2">
               <Button
                 onClick={handleSendFriendRequest}
-                disabled={friendRequestSent}
+                disabled={friendRequestSent || sendingFriendRequest}
                 variant="ghost"
                 size="sm"
                 className={`p-1 sm:p-1.5 md:p-2 ${
                   friendRequestSent 
                     ? 'text-green-400 cursor-default' 
+                    : sendingFriendRequest
+                    ? 'text-yellow-400 cursor-wait'
                     : 'text-gray-400 hover:text-white'
                 }`}
                 data-testid="send-friend-request-btn"
-                title={friendRequestSent ? 'Friend request sent!' : 'Send friend request'}
+                title={friendRequestSent ? 'Friend request sent!' : sendingFriendRequest ? 'Sending...' : 'Send friend request'}
               >
                 {friendRequestSent ? (
                   <><UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> ✓</>
+                ) : sendingFriendRequest ? (
+                  <><UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-pulse" /></>
                 ) : (
                   <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 )}
               </Button>
-              <Button
+              {/* Report button - hidden for now */}
+              {/* <Button
                 onClick={() => setShowReportModal(true)}
                 variant="ghost"
                 size="sm"
@@ -671,7 +743,7 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
                 title="Report User"
               >
                 <Flag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Button>
+              </Button> */}
               <Button
                 onClick={handleSkipPartner}
                 variant="ghost"
@@ -984,8 +1056,9 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
                         e.stopPropagation();
                         setShowEmojiPicker(!showEmojiPicker);
                       }}
-                      className="text-gray-400 text-lg cursor-pointer hover:text-white transition-colors p-1"
+                      className="hidden sm:block text-gray-400 text-lg cursor-pointer hover:text-white transition-colors p-1"
                       type="button"
+                      title="Emoji picker (mobile users: use your keyboard emojis)"
                     >
                       😊
                     </button>

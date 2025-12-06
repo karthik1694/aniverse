@@ -397,11 +397,6 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
                       : 'border-gray-600/50 bg-[#0f1419]/50 hover:border-gray-500'
                   }`}
                 >
-                  {selectedGenderFilter === 'male' && (
-                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white text-[10px]">👑</span>
-                    </div>
-                  )}
                   <svg className={`h-6 w-6 ${selectedGenderFilter === 'male' ? 'text-cyan-400' : 'text-gray-400'}`} viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z"/>
                   </svg>
@@ -418,11 +413,6 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
                       : 'border-gray-600/50 bg-[#0f1419]/50 hover:border-gray-500'
                   }`}
                 >
-                  {selectedGenderFilter === 'both' && (
-                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white text-[10px]">👑</span>
-                    </div>
-                  )}
                   <svg className={`h-6 w-6 ${selectedGenderFilter === 'both' ? 'text-purple-400' : 'text-gray-400'}`} viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/>
                   </svg>
@@ -439,11 +429,6 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
                       : 'border-gray-600/50 bg-[#0f1419]/50 hover:border-gray-500'
                   }`}
                 >
-                  {selectedGenderFilter === 'female' && (
-                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white text-[10px]">👑</span>
-                    </div>
-                  )}
                   <svg className={`h-6 w-6 ${selectedGenderFilter === 'female' ? 'text-pink-400' : 'text-gray-400'}`} viewBox="0 0 24 24" fill="currentColor">
                     <path d="M17.5 9.5c0-3.59-2.91-6.5-6.5-6.5s-6.5 2.91-6.5 6.5c0 3.18 2.3 5.84 5.32 6.37v2.25h-2.57v2h2.57V22h2v-1.88h2.57v-2h-2.57v-2.25c3.02-.53 5.32-3.19 5.32-6.37zm-6.5 4.5c-2.49 0-4.5-2.01-4.5-4.5s2.01-4.5 4.5-4.5 4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"/>
                   </svg>
