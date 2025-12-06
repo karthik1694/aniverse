@@ -610,14 +610,28 @@ async def healthz():
     """
     Lightweight health check endpoint for keeping Render free instance awake.
     UptimeRobot or similar services should ping this every 5 minutes.
+    This also keeps MongoDB connection alive by pinging the database.
     """
+    global db
     try:
         # Test database connection to keep MongoDB connection alive too
         if db is not None:
             await db.admin.command('ping')
             db_status = "connected"
         else:
-            db_status = "not_initialized"
+            # Try to re-establish database connection
+            logging.info("Health check: Attempting to reconnect to database...")
+            try:
+                db = await get_database()
+                if db is not None:
+                    await db.admin.command('ping')
+                    db_status = "reconnected"
+                    logging.info("Health check: Database reconnection successful!")
+                else:
+                    db_status = "unavailable"
+            except Exception as reconnect_error:
+                logging.warning(f"Health check: Reconnection failed: {reconnect_error}")
+                db_status = "unavailable"
         
         return {
             "status": "ok",
@@ -627,10 +641,24 @@ async def healthz():
         }
     except Exception as e:
         logging.warning(f"Health check - DB ping failed: {e}")
+        # Try to reconnect on failure
+        try:
+            logging.info("Health check: Connection stale, attempting reconnect...")
+            db = await get_database()
+            if db is not None:
+                await db.admin.command('ping')
+                db_status = "reconnected"
+                logging.info("Health check: Database reconnection successful!")
+            else:
+                db_status = "connection_issue"
+        except Exception as reconnect_error:
+            logging.warning(f"Health check: Reconnection attempt failed: {reconnect_error}")
+            db_status = "connection_issue"
+        
         # Still return 200 to keep the app awake even if DB has issues
         return {
             "status": "ok",
-            "database": "connection_issue",
+            "database": db_status,
             "uptime": "active",
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
