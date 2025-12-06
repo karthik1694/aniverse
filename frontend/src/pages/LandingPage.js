@@ -236,18 +236,18 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* 6 Features Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
-            {/* Video Chat */}
+          {/* 4 Features Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
+            {/* Text Chat */}
             <div className="text-center">
               <div className="flex items-center justify-center mb-6">
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-full">
-                  <Video className="h-8 w-8 text-white" />
+                  <MessageCircle className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Video Chat</h4>
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Text Chat</h4>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
-                Experience authentic face to face encounters with real people from all over the world.
+                Chat with anime fans worldwide via instant messaging. Share your thoughts and make connections.
               </p>
             </div>
 
@@ -271,22 +271,9 @@ export default function LandingPage() {
                   <Filter className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Search Filters</h4>
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Smart Matching</h4>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
-                Want to narrow down your search? Use interests, genders or locations to filter the strangers you meet.
-              </p>
-            </div>
-
-            {/* Text Chat */}
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-full">
-                  <MessageCircle className="h-8 w-8 text-white" />
-                </div>
-              </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Text Chat</h4>
-              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
-                Not in the mood for video? No problem! You can also chat with strangers via text messages. Full of features.
+                Get matched with people who share your anime interests. Use filters to find your perfect chat partner.
               </p>
             </div>
 
@@ -297,63 +284,14 @@ export default function LandingPage() {
                   <Shield className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Safety & Moderation</h4>
+              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Safe Community</h4>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
-                We make use of advanced AI technologies and enhanced spam protection to keep your chats clean.
-              </p>
-            </div>
-
-            {/* Feature Rich */}
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-full">
-                  <Star className="h-8 w-8 text-white" />
-                </div>
-              </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Feature rich</h4>
-              <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
-                From sending photos, videos, having voice calls, to sharing GIFs and adding avatars, we have it all.
+                Report inappropriate users and enjoy a clean, respectful chat environment.
               </p>
             </div>
           </div>
 
           {/* Anime Passport Feature - REMOVED */}
-
-          {/* Video Chat Section */}
-          <div className="max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
-            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
-              <div className="order-2 md:order-1">
-                <div className="relative p-4 sm:p-6 md:p-8">
-                  <div className="bg-gradient-to-br from-purple-600/20 to-blue-600/20 p-4 rounded-3xl border-2 border-purple-500/40">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-[#1a2332] rounded-2xl aspect-video flex items-center justify-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10" />
-                        <Video className="h-12 w-12 text-cyan-400" />
-                      </div>
-                      <div className="bg-[#1a2332] rounded-2xl aspect-video flex items-center justify-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10" />
-                        <Users className="h-12 w-12 text-purple-400" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="order-1 md:order-2 px-2">
-                <p className="text-purple-400 text-base sm:text-lg mb-3 sm:mb-4 italic">Say hello to anime fans worldwide</p>
-                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
-                  Simple and{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
-                    Fun
-                  </span>
-                  {' '}Video Chats
-                </h3>
-                <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
-                  Enjoy video chats with anime fans worldwide. Our platform is designed to make it easy and safe to connect with people from all over the world. Meet new people, make friends, and have fun!
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* From Strangers to Friends Section */}
           <div className="max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
@@ -367,7 +305,7 @@ export default function LandingPage() {
                   </span>
                 </h3>
                 <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
-                  Discover new people, make real and genuine connections, discuss your favorite anime or just have casual text or video chats. Our platform is designed to help you experience the best of online chatting with fellow otakus.
+                  Discover new people, make real and genuine connections, discuss your favorite anime or just have casual chats. Our platform is designed to help you experience the best of online chatting with fellow otakus.
                 </p>
               </div>
               

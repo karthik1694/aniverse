@@ -574,43 +574,24 @@ export default function MainLayout({ user, setUser, children }) {
               </div>
             </div>
 
-            {/* Premium Section */}
+            {/* Premium Coming Soon Section */}
             <div className="p-3 border-t border-gray-800/50">
-              {user.premium ? (
-                <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Crown className="h-5 w-5 text-yellow-400" />
-                    <h3 className="font-bold text-yellow-400 text-sm">Premium Active</h3>
-                  </div>
-                  <p className="text-xs text-gray-300 mb-3">
-                    You're enjoying all premium features! 🎉
-                  </p>
-                  <div className="text-xs text-yellow-300">
-                    ✨ Unlimited matches<br/>
-                    ✨ Priority matching<br/>
-                    ✨ Extended video chat
-                  </div>
+              <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="h-5 w-5 text-yellow-400" />
+                  <h3 className="font-bold text-yellow-400 text-sm">Premium</h3>
+                  <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full">Coming Soon</span>
                 </div>
-              ) : (
-                <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Crown className="h-5 w-5 text-yellow-400" />
-                    <h3 className="font-bold text-yellow-400 text-sm">Go Premium</h3>
-                  </div>
-                  <p className="text-xs text-gray-300 mb-3">
-                    Unlock exclusive features and support the platform
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setShowPremiumUpgrade(true);
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold text-xs"
-                  >
-                    Upgrade Now
-                  </Button>
+                <p className="text-xs text-gray-300 mb-2">
+                  Exciting premium features are on the way!
+                </p>
+                <div className="text-xs text-yellow-300/80">
+                  ✨ Video Chat<br/>
+                  ✨ Voice Calls<br/>
+                  ✨ Priority Matching<br/>
+                  ✨ Unlimited Matches
                 </div>
-              )}
+              </div>
             </div>
 
             {/* User Arc Section */}
@@ -811,40 +792,24 @@ export default function MainLayout({ user, setUser, children }) {
           </div>
         </div>
 
-        {/* Premium Section */}
+        {/* Premium Coming Soon Section */}
         <div className="p-3 border-t border-gray-800/50">
-          {user.premium ? (
-            <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="h-5 w-5 text-yellow-400" />
-                <h3 className="font-bold text-yellow-400 text-sm">Premium Active</h3>
-              </div>
-              <p className="text-xs text-gray-300 mb-3">
-                You're enjoying all premium features! 🎉
-              </p>
-              <div className="text-xs text-yellow-300">
-                ✨ Unlimited matches<br/>
-                ✨ Priority matching<br/>
-                ✨ Extended video chat
-              </div>
+          <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Crown className="h-5 w-5 text-yellow-400" />
+              <h3 className="font-bold text-yellow-400 text-sm">Premium</h3>
+              <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full">Coming Soon</span>
             </div>
-          ) : (
-            <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="h-5 w-5 text-yellow-400" />
-                <h3 className="font-bold text-yellow-400 text-sm">Go Premium</h3>
-              </div>
-              <p className="text-xs text-gray-300 mb-3">
-                Unlock exclusive features and support the platform
-              </p>
-              <Button
-                onClick={() => setShowPremiumUpgrade(true)}
-                className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold text-xs"
-              >
-                Upgrade Now
-              </Button>
+            <p className="text-xs text-gray-300 mb-2">
+              Exciting premium features are on the way!
+            </p>
+            <div className="text-xs text-yellow-300/80">
+              ✨ Video Chat<br/>
+              ✨ Voice Calls<br/>
+              ✨ Priority Matching<br/>
+              ✨ Unlimited Matches
             </div>
-          )}
+          </div>
         </div>
 
         {/* User Arc Section */}

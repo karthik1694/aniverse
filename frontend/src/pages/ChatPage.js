@@ -31,6 +31,7 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [matchingStats, setMatchingStats] = useState({ totalUsers: 0, activeMatchers: 0 });
+    const [onlineUsersCount, setOnlineUsersCount] = useState(0);
   const [skipCount, setSkipCount] = useState(0);
   const [showSkippedNotification, setShowSkippedNotification] = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
@@ -176,6 +177,11 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       setMatchingStats(stats);
     });
 
+    newSocket.on('online_users_update', (onlineUserIds) => {
+      console.log('Online users update:', onlineUserIds.length, 'users online');
+      setOnlineUsersCount(onlineUserIds.length);
+    });
+
     newSocket.on('search_timeout', () => {
       console.log('Search timeout, retrying...');
       toast.warning('Taking longer than usual - expanding search...');
@@ -296,18 +302,19 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
 
   const handleTypingStart = () => {
     if (socket && socket.connected) {
-      socket.emit('typing_start');
-      
-      // Clear existing timeout
+      // Clear existing timeout first
       if (typingTimeout) {
         clearTimeout(typingTimeout);
+      } else {
+        // Only emit typing_start if this is a new typing session
+        socket.emit('typing_start');
       }
       
-      // Set new timeout to stop typing indicator after 3 seconds of inactivity
+      // Set new timeout to stop typing indicator after 2 seconds of inactivity
       const timeout = setTimeout(() => {
         socket.emit('typing_stop');
         setTypingTimeout(null);
-      }, 3000);
+      }, 2000);
       
       setTypingTimeout(timeout);
     }
@@ -328,13 +335,11 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
     const value = e.target.value;
     setMessageInput(value);
     
-    // Start typing indicator if user is typing
-    if (value.trim() && !typingTimeout) {
+    // Emit typing indicator on every keystroke (with debounce via timeout)
+    if (value.trim()) {
       handleTypingStart();
-    }
-    
-    // If input becomes empty, stop typing indicator
-    if (!value.trim() && typingTimeout) {
+    } else if (typingTimeout) {
+      // If input becomes empty, stop typing indicator
       handleTypingStop();
     }
   };
@@ -535,6 +540,7 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
           clearNotification={clearNotification}
           markNotificationRead={markNotificationRead}
           matchingStats={matchingStats}
+                    onlineUsersCount={onlineUsersCount}
         />
       </>
     );
@@ -983,6 +989,22 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
                     >
                       😊
                     </button>
+                    {/* Send button - appears when there's text */}
+                    {(messageInput.trim() || selectedImage) && (
+                      <button
+                        onClick={() => {
+                          if (selectedImage) {
+                            handleSendWithImage();
+                          } else {
+                            handleSendMessage();
+                          }
+                        }}
+                        className="text-cyan-400 hover:text-cyan-300 transition-colors p-1"
+                        title="Send message"
+                      >
+                        <Send className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 

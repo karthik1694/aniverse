@@ -471,39 +471,72 @@ async def shutdown_event():
         logging.error(f"❌ Error during shutdown: {e}")
 
 # Calculate compatibility score
-def calculate_compatibility(user1: User, user2: User) -> int:
+def normalize_interests(interests: list) -> frozenset:
+    """Normalize interests to lowercase frozenset for fast, case-insensitive matching"""
+    return frozenset(item.lower().strip() for item in interests if item)
+
+def calculate_compatibility_fast(user1_sets: dict, user2_sets: dict, user1_has_data: dict, user2_has_data: dict) -> int:
+    """
+    Optimized compatibility calculation using pre-computed sets.
+    This avoids repeated set creation and provides O(1) set intersections.
+    """
     score = 0
     
-    # Check what data is available
-    has_anime = bool(user1.favorite_anime and user2.favorite_anime)
-    has_genres = bool(user1.favorite_genres and user2.favorite_genres)
-    has_themes = bool(user1.favorite_themes and user2.favorite_themes)
-    has_characters = bool(user1.favorite_characters and user2.favorite_characters)
+    # Check what data is available (pre-computed for speed)
+    has_anime = user1_has_data['anime'] and user2_has_data['anime']
+    has_genres = user1_has_data['genres'] and user2_has_data['genres']
+    has_themes = user1_has_data['themes'] and user2_has_data['themes']
+    has_characters = user1_has_data['characters'] and user2_has_data['characters']
     
-    # Shared favorite anime (High weight - 40 points)
-    shared_anime = set(user1.favorite_anime) & set(user2.favorite_anime)
-    score += len(shared_anime) * 10
+    # Shared favorite anime (High weight - 10 points each, up to 40 points)
+    if has_anime:
+        shared_anime_count = len(user1_sets['anime'] & user2_sets['anime'])
+        score += shared_anime_count * 10
     
     # Genre alignment - BOOSTED weight when it's the primary data available
-    shared_genres = set(user1.favorite_genres) & set(user2.favorite_genres)
     if has_genres:
+        shared_genres_count = len(user1_sets['genres'] & user2_sets['genres'])
         # If users primarily use genres (no anime/themes/characters), give genres much more weight
         if not (has_anime or has_themes or has_characters):
             # Genres are the ONLY data - make them worth much more (up to 100 points)
-            score += len(shared_genres) * 20
+            score += shared_genres_count * 20
         else:
             # Standard weight when other data exists
-            score += len(shared_genres) * 5
+            score += shared_genres_count * 5
     
-    # Theme alignment (Medium weight - 20 points)
-    shared_themes = set(user1.favorite_themes) & set(user2.favorite_themes)
-    score += len(shared_themes) * 4
+    # Theme alignment (Medium weight - 4 points each)
+    if has_themes:
+        shared_themes_count = len(user1_sets['themes'] & user2_sets['themes'])
+        score += shared_themes_count * 4
     
-    # Character affinity (Low-Medium weight - 10 points)
-    shared_characters = set(user1.favorite_characters) & set(user2.favorite_characters)
-    score += len(shared_characters) * 2
+    # Character affinity (Low-Medium weight - 2 points each)
+    if has_characters:
+        shared_characters_count = len(user1_sets['characters'] & user2_sets['characters'])
+        score += shared_characters_count * 2
     
     return min(score, 100)  # Cap at 100
+
+def prepare_user_sets(user: User) -> tuple:
+    """Pre-compute normalized sets for a user's interests (called once when user joins queue)"""
+    user_sets = {
+        'anime': normalize_interests(user.favorite_anime),
+        'genres': normalize_interests(user.favorite_genres),
+        'themes': normalize_interests(user.favorite_themes),
+        'characters': normalize_interests(user.favorite_characters)
+    }
+    has_data = {
+        'anime': len(user_sets['anime']) > 0,
+        'genres': len(user_sets['genres']) > 0,
+        'themes': len(user_sets['themes']) > 0,
+        'characters': len(user_sets['characters']) > 0
+    }
+    return user_sets, has_data
+
+def calculate_compatibility(user1: User, user2: User) -> int:
+    """Original compatibility function - now uses optimized version internally"""
+    user1_sets, user1_has_data = prepare_user_sets(user1)
+    user2_sets, user2_has_data = prepare_user_sets(user2)
+    return calculate_compatibility_fast(user1_sets, user2_sets, user1_has_data, user2_has_data)
 
 # Calculate shared anime universe data
 def calculate_shared_universe(user1: User, user2: User) -> Dict:
@@ -2790,13 +2823,20 @@ async def join_matching(sid, data):
                 
                 logging.info(f"Match created: {user.name} <-> {partner_data['name']} (type: {match_type}, score: {best_score})")
         else:
-            # Add to queue
+            # Add to queue with pre-computed sets for optimized matching
             user_dict_queue = user.dict()
             user_dict_queue['created_at'] = user_dict_queue['created_at'].isoformat() if isinstance(user_dict_queue['created_at'], datetime) else user_dict_queue['created_at']
+            
+            # Pre-compute interest sets for O(1) compatibility checking
+            user_sets, has_data = prepare_user_sets(user)
+            
             matching_queue.append({
                 'sid': sid,
                 'user_id': user_id,
-                'user_data': user_dict_queue
+                'user_data': user_dict_queue,
+                'user_sets': user_sets,  # Pre-computed normalized sets
+                'has_data': has_data,     # Pre-computed data availability flags
+                'joined_at': datetime.utcnow().timestamp()  # For fairness tracking
             })
             logging.info(f"Added user {user.name} to matching queue. Queue size: {len(matching_queue)}")
             
@@ -2894,13 +2934,20 @@ async def typing_start(sid, data):
     
     # Get user data to send partner's name
     user_id = match_info['user_id']
+    user_name = "Partner"
+    
+    # Try to get from database first
     user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
     if user_doc:
-        user = User(**user_doc)
-        await sio.emit('partner_typing_start', {
-            'user_name': user.name,
-            'user_id': user_id
-        }, room=partner_sid)
+        user_name = user_doc.get('name', 'Partner')
+    elif 'user_data' in match_info and match_info['user_data']:
+        # Fallback to stored user data (for anonymous users)
+        user_name = match_info['user_data'].get('name', 'Partner')
+    
+    await sio.emit('partner_typing_start', {
+        'user_name': user_name,
+        'user_id': user_id
+    }, room=partner_sid)
 
 @sio.event
 async def typing_stop(sid, data):
@@ -2967,11 +3014,17 @@ async def skip_partner(sid):
             user_dict = user.dict()
             user_dict['created_at'] = user_dict['created_at'].isoformat() if isinstance(user_dict['created_at'], datetime) else user_dict['created_at']
             
-            # Add back to matching queue
+            # Pre-compute interest sets for optimized matching
+            user_sets, has_data = prepare_user_sets(user)
+            
+            # Add back to matching queue with pre-computed sets
             matching_queue.append({
                 'sid': sid,
                 'user_id': user_id,
-                'user_data': user_dict
+                'user_data': user_dict,
+                'user_sets': user_sets,  # Pre-computed normalized sets
+                'has_data': has_data,     # Pre-computed data availability flags
+                'joined_at': datetime.utcnow().timestamp()  # For fairness tracking
             })
             
             # Send matching stats
@@ -3083,35 +3136,37 @@ async def clear_matching_queue(request: Request):
 MIN_COMPATIBILITY_THRESHOLD = 15  # Minimum score for interest-based matching
 GOOD_MATCH_THRESHOLD = 30  # Score for a good interest-based match
 GREAT_MATCH_THRESHOLD = 50  # Score for a great interest-based match
+PERFECT_MATCH_THRESHOLD = 80  # Score for early exit optimization
 
 async def find_best_match(user, queue):
     """
-    Enhanced matching algorithm that prioritizes interest-based matches but falls back to random matching.
+    Optimized matching algorithm with:
+    - Pre-computed sets for O(1) compatibility checks
+    - Early exit when perfect match (80%+) found
+    - Case-insensitive interest matching
+    - Queue wait time fairness (FIFO for same tier)
+    
     Priority:
-    1. Great matches (50%+ compatibility)
+    1. Great matches (50%+ compatibility) - sorted by score, then wait time
     2. Good matches (30%+ compatibility)
     3. Decent matches (15%+ compatibility)
     4. Random match if no interest overlap
     """
     if not queue:
-        logging.info("No users in queue for matching")
+        logging.debug("No users in queue for matching")
         return None
     
     # Filter out the current user from the queue to prevent self-matching
     filtered_queue = [q for q in queue if q['user_data']['id'] != user.id]
     
     if not filtered_queue:
-        logging.info("No other users in queue for matching (only self)")
+        logging.debug("No other users in queue for matching (only self)")
         return None
     
-    logging.info(f"Finding best match for user {user.name} from queue of {len(filtered_queue)} users")
-    logging.info(f"User {user.name} preferences: anime={user.favorite_anime[:3] if len(user.favorite_anime) > 3 else user.favorite_anime}, genres={user.favorite_genres[:3] if len(user.favorite_genres) > 3 else user.favorite_genres}")
+    logging.info(f"Finding best match for {user.name} from {len(filtered_queue)} users in queue")
     
-    # Log what type of matching will be prioritized
-    if user.favorite_genres:
-        logging.info(f"User {user.name} has {len(user.favorite_genres)} genre interests: {user.favorite_genres}")
-    if user.favorite_anime:
-        logging.info(f"User {user.name} has {len(user.favorite_anime)} favorite anime: {user.favorite_anime}")
+    # Pre-compute current user's sets once (case-insensitive, normalized)
+    user_sets, user_has_data = prepare_user_sets(user)
     
     # Categorize potential matches by compatibility
     great_matches = []  # 50%+
@@ -3119,77 +3174,89 @@ async def find_best_match(user, queue):
     decent_matches = [] # 15-29%
     low_matches = []    # <15%
     
-    # Evaluate all potential matches
-    for queued_user in filtered_queue:
-        queued_user_obj = User(**queued_user['user_data'])
-        compatibility_score = calculate_compatibility(user, queued_user_obj)
+    perfect_match_found = None  # For early exit optimization
+    
+    # Evaluate potential matches - uses pre-computed sets when available
+    for idx, queued_user in enumerate(filtered_queue):
+        # Use pre-computed sets if available, otherwise compute them
+        if 'user_sets' in queued_user and 'has_data' in queued_user:
+            queued_sets = queued_user['user_sets']
+            queued_has_data = queued_user['has_data']
+        else:
+            # Fallback: compute sets (for backwards compatibility)
+            queued_user_obj = User(**queued_user['user_data'])
+            queued_sets, queued_has_data = prepare_user_sets(queued_user_obj)
         
-        # Log shared interests for debugging
-        shared_genres = set(user.favorite_genres) & set(queued_user_obj.favorite_genres)
-        if shared_genres:
-            logging.info(f"  → {user.name} & {queued_user_obj.name} share genres: {list(shared_genres)}")
+        # Fast compatibility calculation using pre-computed sets
+        compatibility_score = calculate_compatibility_fast(
+            user_sets, queued_sets, user_has_data, queued_has_data
+        )
         
+        # Build match data
         match_data = {
             'queued_user': queued_user,
             'score': compatibility_score,
-            'user_obj': queued_user_obj
+            'queue_position': idx  # For FIFO fairness within same tier
         }
         
+        # Categorize by score threshold
         if compatibility_score >= GREAT_MATCH_THRESHOLD:
             great_matches.append(match_data)
-            logging.info(f"🌟 GREAT match: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
+            # Early exit: if we find a perfect match (80%+), we can stop searching
+            if compatibility_score >= PERFECT_MATCH_THRESHOLD and not perfect_match_found:
+                perfect_match_found = match_data
+                logging.info(f"Perfect match found: {compatibility_score}% - using early exit")
+                break
         elif compatibility_score >= GOOD_MATCH_THRESHOLD:
             good_matches.append(match_data)
-            logging.info(f"✨ GOOD match: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
         elif compatibility_score >= MIN_COMPATIBILITY_THRESHOLD:
             decent_matches.append(match_data)
-            logging.info(f"👍 Decent match: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
         else:
             low_matches.append(match_data)
-            logging.info(f"🎲 Low compatibility: {user.name} <-> {queued_user_obj.name}: {compatibility_score}%")
     
-    # Select the best available match
+    # Select the best available match with fairness consideration
     selected_match = None
     match_type = 'random'
     
-    if great_matches:
-        # Pick the best great match
-        selected_match = max(great_matches, key=lambda x: x['score'])
+    if perfect_match_found:
+        # Perfect match found via early exit
+        selected_match = perfect_match_found
         match_type = 'great_match'
-        logging.info(f"🌟 Selected GREAT match: {selected_match['score']}% compatibility")
+        logging.info(f"Selected PERFECT match: {selected_match['score']}% compatibility")
+    elif great_matches:
+        # Pick best great match (highest score, then earliest in queue for fairness)
+        selected_match = max(great_matches, key=lambda x: (x['score'], -x['queue_position']))
+        match_type = 'great_match'
+        logging.info(f"Selected GREAT match: {selected_match['score']}% compatibility")
     elif good_matches:
-        # Pick the best good match
-        selected_match = max(good_matches, key=lambda x: x['score'])
+        selected_match = max(good_matches, key=lambda x: (x['score'], -x['queue_position']))
         match_type = 'good_match'
-        logging.info(f"✨ Selected GOOD match: {selected_match['score']}% compatibility")
+        logging.info(f"Selected GOOD match: {selected_match['score']}% compatibility")
     elif decent_matches:
-        # Pick the best decent match
-        selected_match = max(decent_matches, key=lambda x: x['score'])
+        selected_match = max(decent_matches, key=lambda x: (x['score'], -x['queue_position']))
         match_type = 'interest_based'
-        logging.info(f"👍 Selected DECENT match: {selected_match['score']}% compatibility")
+        logging.info(f"Selected DECENT match: {selected_match['score']}% compatibility")
     else:
-        # Random matching - pick anyone from low matches
+        # Random matching - prefer users who have waited longest (FIFO fairness)
         if low_matches:
-            selected_match = random.choice(low_matches)
+            # Pick the user who joined first (lowest queue_position)
+            selected_match = min(low_matches, key=lambda x: x['queue_position'])
             match_type = 'random'
-            logging.info(f"🎲 Selected RANDOM match: {selected_match['score']}% compatibility")
+            logging.info(f"Selected RANDOM match: {selected_match['score']}% (FIFO)")
         else:
-            # Fallback to any user in queue
-            queued_user = random.choice(filtered_queue)
-            queued_user_obj = User(**queued_user['user_data'])
+            # Fallback to first user in filtered queue (waited longest)
+            queued_user = filtered_queue[0]
             selected_match = {
                 'queued_user': queued_user,
                 'score': random.randint(5, 15),
-                'user_obj': queued_user_obj
+                'queue_position': 0
             }
             match_type = 'random'
-            logging.info(f"🎲 Fallback RANDOM match")
+            logging.info(f"Fallback RANDOM match")
     
     if not selected_match:
         logging.warning("No match could be selected")
         return None
-    
-    logging.info(f"FINAL MATCH: {user.name} <-> {selected_match['user_obj'].name} (type: {match_type}, score: {selected_match['score']}%)")
     
     return {
         'match': selected_match['queued_user'],

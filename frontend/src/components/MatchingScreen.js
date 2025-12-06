@@ -18,7 +18,8 @@ const MatchingScreen = ({
   notifications = [],
   clearNotification,
   markNotificationRead,
-  matchingStats = { totalUsers: 0, activeMatchers: 0 }
+  matchingStats = { totalUsers: 0, activeMatchers: 0 },
+  onlineUsersCount = 0
 }) => {
   const [searchPhase, setSearchPhase] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
@@ -197,17 +198,15 @@ const MatchingScreen = ({
   };
 
   const renderStats = () => {
-    if (!matching) return null;
-    
-    // Show real queue count - activeMatchers is the actual number searching right now
-    const searchingNow = matchingStats.activeMatchers || 0;
+    // Always show online users count - not just when matching
+    const onlineNow = onlineUsersCount || 0;
     
     return (
       <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <Badge className="bg-cyan-500/20 text-cyan-300 px-2 sm:px-3 py-1 text-xs sm:text-sm animate-pulse">
+        <Badge className="bg-green-500/20 text-green-300 px-2 sm:px-3 py-1 text-xs sm:text-sm animate-pulse">
           <Users className="h-3 w-3 mr-1" />
-          <span className="font-semibold">{searchingNow}</span>
-          <span className="ml-1">searching right now</span>
+          <span className="font-semibold">{onlineNow}</span>
+          <span className="ml-1">online now</span>
         </Badge>
       </div>
     );

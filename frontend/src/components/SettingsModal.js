@@ -3,7 +3,7 @@ import { X, User, Settings as SettingsIcon, Shield, Sliders } from 'lucide-react
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { axiosInstance } from '../api/axiosInstance';
+import { axiosInstance, BACKEND_URL } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import { isAnonymousUser } from '../utils/anonymousAuth';
 import UserAvatar from './UserAvatar';
@@ -25,6 +25,15 @@ export default function SettingsModal({ user, setUser, onClose }) {
     favorite_themes: user.favorite_themes || [],
   });
 
+  // Privacy settings state
+  const [privacySettings, setPrivacySettings] = useState({
+    show_online_status: user.show_online_status !== false, // default true
+    allow_friend_requests: user.allow_friend_requests !== false, // default true
+  });
+
+  // Preferences state
+  const [genderFilter, setGenderFilter] = useState(user.gender_filter || 'both');
+
   // Update profile state when user data changes
   useEffect(() => {
     setProfile({
@@ -33,6 +42,11 @@ export default function SettingsModal({ user, setUser, onClose }) {
       favorite_genres: user.favorite_genres || [],
       favorite_themes: user.favorite_themes || [],
     });
+    setPrivacySettings({
+      show_online_status: user.show_online_status !== false,
+      allow_friend_requests: user.allow_friend_requests !== false,
+    });
+    setGenderFilter(user.gender_filter || 'both');
   }, [user]);
 
   const genres = [
@@ -213,6 +227,71 @@ export default function SettingsModal({ user, setUser, onClose }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle privacy toggle
+  const handlePrivacyToggle = async (setting) => {
+    const newValue = !privacySettings[setting];
+    const newSettings = { ...privacySettings, [setting]: newValue };
+    setPrivacySettings(newSettings);
+
+    try {
+      if (isAnonymousUser(user)) {
+        const updatedUser = {
+          ...user,
+          [setting]: newValue,
+        };
+        localStorage.setItem('anonymous_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      } else {
+        const response = await axiosInstance.put('profile', {
+          ...user,
+          [setting]: newValue,
+        });
+        setUser(response.data);
+      }
+      toast.success(`${setting === 'show_online_status' ? 'Online status visibility' : 'Friend requests'} ${newValue ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Error updating privacy setting:', error);
+      // Revert on error
+      setPrivacySettings(privacySettings);
+      toast.error('Failed to update setting');
+    }
+  };
+
+  // Handle gender filter change
+  const handleGenderFilterChange = async (filter) => {
+    const newFilter = filter.toLowerCase();
+    setGenderFilter(newFilter);
+
+    try {
+      if (isAnonymousUser(user)) {
+        const updatedUser = {
+          ...user,
+          gender_filter: newFilter,
+        };
+        localStorage.setItem('anonymous_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      } else {
+        const response = await axiosInstance.put('profile', {
+          ...user,
+          gender_filter: newFilter,
+        });
+        setUser(response.data);
+      }
+      toast.success(`Gender filter set to: ${filter}`);
+    } catch (error) {
+      console.error('Error updating gender filter:', error);
+      setGenderFilter(user.gender_filter || 'both');
+      toast.error('Failed to update preference');
+    }
+  };
+
+  // Handle claim account
+  const handleClaimAccount = () => {
+    const redirectUrl = `${window.location.origin}/`;
+    console.log('Claiming account, redirecting to auth with URL:', redirectUrl);
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   const tabs = [
@@ -508,7 +587,10 @@ export default function SettingsModal({ user, setUser, onClose }) {
                       <p className="text-sm text-orange-300 mb-3">
                         You're using an anonymous account. Claim your account to save your data permanently.
                       </p>
-                      <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+                      <Button 
+                        onClick={handleClaimAccount}
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                      >
                         Claim Account
                       </Button>
                     </div>
@@ -542,8 +624,11 @@ export default function SettingsModal({ user, setUser, onClose }) {
                         <p className="text-sm font-medium text-white">Show Online Status</p>
                         <p className="text-xs text-gray-400">Let others see when you're online</p>
                       </div>
-                      <button className="bg-[#5865f2] w-10 h-6 rounded-full relative">
-                        <span className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></span>
+                      <button 
+                        onClick={() => handlePrivacyToggle('show_online_status')}
+                        className={`w-10 h-6 rounded-full relative transition-colors ${privacySettings.show_online_status ? 'bg-[#5865f2]' : 'bg-gray-600'}`}
+                      >
+                        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${privacySettings.show_online_status ? 'right-1' : 'left-1'}`}></span>
                       </button>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 p-3 bg-[#1e2936] rounded">
@@ -551,8 +636,11 @@ export default function SettingsModal({ user, setUser, onClose }) {
                         <p className="text-sm font-medium text-white">Allow Friend Requests</p>
                         <p className="text-xs text-gray-400">Anyone can send you friend requests</p>
                       </div>
-                      <button className="bg-[#5865f2] w-10 h-6 rounded-full relative">
-                        <span className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></span>
+                      <button 
+                        onClick={() => handlePrivacyToggle('allow_friend_requests')}
+                        className={`w-10 h-6 rounded-full relative transition-colors ${privacySettings.allow_friend_requests ? 'bg-[#5865f2]' : 'bg-gray-600'}`}
+                      >
+                        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${privacySettings.allow_friend_requests ? 'right-1' : 'left-1'}`}></span>
                       </button>
                     </div>
                   </div>
@@ -567,12 +655,14 @@ export default function SettingsModal({ user, setUser, onClose }) {
                   <div className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">Gender Filter</label>
+                      <p className="text-xs text-gray-400 mb-3">Choose who you want to match with</p>
                       <div className="flex flex-wrap gap-2">
                         {['Male', 'Female', 'Both'].map((option) => (
                           <button
                             key={option}
-                            className={`px-4 py-2 rounded text-sm ${
-                              user.gender === option.toLowerCase() || (option === 'Both' && !user.gender)
+                            onClick={() => handleGenderFilterChange(option)}
+                            className={`px-4 py-2 rounded text-sm transition-colors ${
+                              genderFilter === option.toLowerCase()
                                 ? 'bg-[#5865f2] text-white'
                                 : 'bg-[#1e2936] text-gray-300 hover:bg-[#252d3a]'
                             }`}

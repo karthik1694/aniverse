@@ -4,22 +4,37 @@ Test genre-based matching (like what users set in Dashboard)
 """
 
 # Simple compatibility calculation matching the updated server.py logic
+def normalize_interests(interests: list) -> set:
+    """Normalize interests to lowercase for case-insensitive matching"""
+    return set(item.lower().strip() for item in interests if item)
+
 def calculate_compatibility(user1_data, user2_data):
     score = 0
     
-    # Check what data is available
-    has_anime = bool(user1_data.get('favorite_anime') and user2_data.get('favorite_anime'))
-    has_genres = bool(user1_data.get('favorite_genres') and user2_data.get('favorite_genres'))
-    has_themes = bool(user1_data.get('favorite_themes') and user2_data.get('favorite_themes'))
-    has_characters = bool(user1_data.get('favorite_characters') and user2_data.get('favorite_characters'))
+    # Normalize all interests to lowercase for case-insensitive matching
+    user1_anime = normalize_interests(user1_data.get('favorite_anime', []))
+    user2_anime = normalize_interests(user2_data.get('favorite_anime', []))
+    user1_genres = normalize_interests(user1_data.get('favorite_genres', []))
+    user2_genres = normalize_interests(user2_data.get('favorite_genres', []))
+    user1_themes = normalize_interests(user1_data.get('favorite_themes', []))
+    user2_themes = normalize_interests(user2_data.get('favorite_themes', []))
+    user1_characters = normalize_interests(user1_data.get('favorite_characters', []))
+    user2_characters = normalize_interests(user2_data.get('favorite_characters', []))
     
-    # Shared favorite anime (High weight - 40 points)
-    shared_anime = set(user1_data.get('favorite_anime', [])) & set(user2_data.get('favorite_anime', []))
-    score += len(shared_anime) * 10
+    # Check what data is available
+    has_anime = bool(user1_anime and user2_anime)
+    has_genres = bool(user1_genres and user2_genres)
+    has_themes = bool(user1_themes and user2_themes)
+    has_characters = bool(user1_characters and user2_characters)
+    
+    # Shared favorite anime (High weight - 10 points each)
+    if has_anime:
+        shared_anime = user1_anime & user2_anime
+        score += len(shared_anime) * 10
     
     # Genre alignment - BOOSTED weight when it's the primary data available
-    shared_genres = set(user1_data.get('favorite_genres', [])) & set(user2_data.get('favorite_genres', []))
     if has_genres:
+        shared_genres = user1_genres & user2_genres
         # If users primarily use genres (no anime/themes/characters), give genres much more weight
         if not (has_anime or has_themes or has_characters):
             # Genres are the ONLY data - make them worth much more (up to 100 points)
@@ -28,13 +43,15 @@ def calculate_compatibility(user1_data, user2_data):
             # Standard weight when other data exists
             score += len(shared_genres) * 5
     
-    # Theme alignment (Medium weight - 20 points)
-    shared_themes = set(user1_data.get('favorite_themes', [])) & set(user2_data.get('favorite_themes', []))
-    score += len(shared_themes) * 4
+    # Theme alignment (Medium weight - 4 points each)
+    if has_themes:
+        shared_themes = user1_themes & user2_themes
+        score += len(shared_themes) * 4
     
-    # Character affinity (Low-Medium weight - 10 points)
-    shared_characters = set(user1_data.get('favorite_characters', [])) & set(user2_data.get('favorite_characters', []))
-    score += len(shared_characters) * 2
+    # Character affinity (Low-Medium weight - 2 points each)
+    if has_characters:
+        shared_characters = user1_characters & user2_characters
+        score += len(shared_characters) * 2
     
     return min(score, 100)  # Cap at 100
 
