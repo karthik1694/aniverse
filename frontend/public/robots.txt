@@ -1,0 +1,12 @@
+# OtakuCafe Robots.txt
+# https://otakucafe.fun
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://otakucafe.fun/sitemap.xml
+
+# Disallow admin or private areas (add as needed)
+Disallow: /api/
+Disallow: /admin/
