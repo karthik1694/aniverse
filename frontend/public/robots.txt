@@ -1,12 +1,55 @@
 # OtakuCafe Robots.txt
 # https://otakucafe.fun
+# Last updated: 2026-05-04
 
+# Default: Allow all crawlers
 User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /static/js/
+Disallow: /static/css/
+
+# Google (Search + AI Overview)
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /images/
+
+# Bing (Search + Microsoft Copilot)
+User-agent: Bingbot
+Allow: /
+
+# OpenAI / ChatGPT
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Anthropic / Claude AI
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Google Extended (Gemini AI training)
+User-agent: Google-Extended
+Allow: /
+
+# Apple / Applebot (Siri + Apple Intelligence)
+User-agent: Applebot
+Allow: /
+
+# Brave Search (used by Claude AI)
+User-agent: Brave
 Allow: /
 
 # Sitemap location
 Sitemap: https://otakucafe.fun/sitemap.xml
-
-# Disallow admin or private areas (add as needed)
-Disallow: /api/
-Disallow: /admin/

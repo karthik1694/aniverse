@@ -24,28 +24,34 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         
         <!-- Primary SEO Meta Tags -->
-        <meta name="title" content="OtakuCafe - Talk to Anime Fans & Strangers | Free Anime Chat" />
-        <meta name="description" content="Talk to strangers who love anime! OtakuCafe is the #1 free anime chat platform to meet random anime fans, discuss your favorite series, and make otaku friends worldwide. Join episode watch parties and find your anime community!" />
-        <meta name="keywords" content="talk to strangers, anime chat, talk to anime fans, random chat, anime community, otaku chat, meet anime lovers, anime friends, watch anime together, episode rooms, anime dating, weeb chat, manga chat, anime social network" />
-        <meta name="robots" content="index, follow" />
-        <meta name="language" content="English" />
+        <meta name="title" content="OtakuCafe - Talk to Real Anime Fans & Strangers | Free Anime Chat" />
+        <meta name="description" content="Talk to real anime fans online free! No bots, just otaku. Chat with strangers who love anime, make friends, and join episode watch parties worldwide." />
+        <meta name="keywords" content="talk to anime fans, anime chat, anime chat online free, talk to strangers, random anime chat, otaku chat room, anime stranger chat, anime omegle alternative, weeb chat, anime community chat, watch anime together, anime friends online, anonymous anime chat, safe anime chat, anime social network, meet anime lovers, manga chat, anime watch party" />
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="language" content="en" />
         <meta name="author" content="OtakuCafe" />
-        <link rel="canonical" href="https://otakucafe.fun" />
+        <meta name="revisit-after" content="3 days" />
+        <link rel="canonical" href="https://otakucafe.fun/" />
         
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://otakucafe.fun/" />
-        <meta property="og:title" content="OtakuCafe - Talk to Anime Fans & Strangers | Free Anime Chat" />
-        <meta property="og:description" content="Talk to strangers who love anime! The #1 free anime chat platform to meet random anime fans, discuss series, and make otaku friends worldwide." />
+        <meta property="og:title" content="OtakuCafe - Talk to Real Anime Fans & Strangers | Free Anime Chat" />
+        <meta property="og:description" content="Chat with real anime fans, not bots! The #1 free anime chat platform to meet random otaku, discuss series & join episode watch parties worldwide." />
         <meta property="og:image" content="https://otakucafe.fun/images/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="OtakuCafe - Free anime chat platform to talk to real anime fans and strangers" />
         <meta property="og:site_name" content="OtakuCafe" />
+        <meta property="og:locale" content="en_US" />
         
-        <!-- Twitter -->
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://otakucafe.fun/" />
-        <meta property="twitter:title" content="OtakuCafe - Talk to Anime Fans & Strangers | Free Anime Chat" />
-        <meta property="twitter:description" content="Talk to strangers who love anime! Meet random anime fans, discuss series, and make otaku friends worldwide." />
-        <meta property="twitter:image" content="https://otakucafe.fun/images/og-image.png" />
+        <!-- Twitter Cards (using name attribute per Twitter spec) -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://otakucafe.fun/" />
+        <meta name="twitter:title" content="OtakuCafe - Talk to Real Anime Fans & Strangers | Free Anime Chat" />
+        <meta name="twitter:description" content="Chat with real anime fans, not bots! Meet random otaku, discuss series & join episode watch parties worldwide." />
+        <meta name="twitter:image" content="https://otakucafe.fun/images/og-image.png" />
+        <meta name="twitter:image:alt" content="OtakuCafe - Free anime chat platform for otaku worldwide" />
         
         <!-- Additional SEO -->
         <meta name="geo.region" content="US" />
@@ -54,30 +60,141 @@
         <!-- Preload background image for instant loading -->
         <link rel="preload" href="%PUBLIC_URL%/images/background.jpg" as="image" />
         
-        <!-- Structured Data for Rich Snippets -->
+        <!-- DNS Prefetch for external resources -->
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        
+        <!-- Enhanced Structured Data for Rich Snippets & GEO -->
         <script type="application/ld+json">
         {
             "@context": "https://schema.org",
-            "@type": "WebApplication",
-            "name": "OtakuCafe",
-            "description": "Talk to strangers who love anime. Free anime chat platform to meet random anime fans and make otaku friends worldwide.",
-            "url": "https://otakucafe.fun",
-            "applicationCategory": "SocialNetworkingApplication",
-            "operatingSystem": "Web Browser",
-            "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "USD"
-            },
-            "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "4.8",
-                "ratingCount": "1250"
-            }
+            "@graph": [
+                {
+                    "@type": "WebSite",
+                    "name": "OtakuCafe",
+                    "alternateName": "Otaku Cafe",
+                    "url": "https://otakucafe.fun/",
+                    "description": "Free anime chat platform to talk to real anime fans, meet strangers who love anime, and make otaku friends worldwide.",
+                    "inLanguage": "en",
+                    "potentialAction": {
+                        "@type": "SearchAction",
+                        "target": "https://otakucafe.fun/dashboard?search={search_term_string}",
+                        "query-input": "required name=search_term_string"
+                    }
+                },
+                {
+                    "@type": "WebApplication",
+                    "name": "OtakuCafe",
+                    "description": "Talk to real anime fans online for free. OtakuCafe is an anime chat platform with interest-based matching, anonymous text chat, episode watch rooms, and a safe community for otaku worldwide.",
+                    "url": "https://otakucafe.fun/",
+                    "applicationCategory": "SocialNetworkingApplication",
+                    "operatingSystem": "Web Browser",
+                    "browserRequirements": "Requires JavaScript",
+                    "offers": {
+                        "@type": "Offer",
+                        "price": "0",
+                        "priceCurrency": "USD",
+                        "availability": "https://schema.org/InStock"
+                    },
+                    "aggregateRating": {
+                        "@type": "AggregateRating",
+                        "ratingValue": "4.8",
+                        "ratingCount": "1250",
+                        "bestRating": "5",
+                        "worstRating": "1"
+                    },
+                    "featureList": [
+                        "Interest-based anime fan matching",
+                        "Anonymous text chat with no signup required",
+                        "Episode watch rooms for synchronized anime viewing",
+                        "Friend system with chat history",
+                        "Anime Passport profile customization",
+                        "Safe community with moderation and reporting",
+                        "Smart matching by anime interests like One Piece, Naruto, Attack on Titan"
+                    ]
+                },
+                {
+                    "@type": "Organization",
+                    "name": "OtakuCafe",
+                    "url": "https://otakucafe.fun/",
+                    "logo": "https://otakucafe.fun/logo.png",
+                    "description": "The #1 free anime chat platform connecting real otaku fans worldwide. Chat with strangers who love anime, join episode watch parties, and build genuine friendships.",
+                    "contactPoint": {
+                        "@type": "ContactPoint",
+                        "contactType": "customer service",
+                        "url": "https://otakucafe.fun/contact-us"
+                    },
+                    "sameAs": []
+                },
+                {
+                    "@type": "FAQPage",
+                    "mainEntity": [
+                        {
+                            "@type": "Question",
+                            "name": "What is OtakuCafe?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "OtakuCafe is a free anime chat platform where you can talk to real anime fans and strangers online. With over 10,000 active users worldwide, it connects otaku through interest-based matching, anonymous text chat, and episode watch rooms. Unlike AI chatbot platforms, OtakuCafe is designed for genuine human connections between anime lovers."
+                            }
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "Is OtakuCafe free to use?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "Yes, OtakuCafe is completely free to use. You can start chatting anonymously without creating an account — no signup, no download, no bots. Just click 'Start Chatting Free' and get matched with a real anime fan instantly."
+                            }
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "How does OtakuCafe match me with other anime fans?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "OtakuCafe uses interest-based smart matching to connect you with fans who share your favorite anime series. You can set preferences for specific shows like One Piece, Naruto, Attack on Titan, Demon Slayer, My Hero Academia, or Jujutsu Kaisen, and get matched with fans who love the same series."
+                            }
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "Is OtakuCafe safe for chatting with strangers?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "OtakuCafe prioritizes user safety with community guidelines, a report system for inappropriate behavior, and content moderation. Users can chat anonymously and choose to reveal their identity only when comfortable. The platform is designed to be a safe space for anime fans of all ages."
+                            }
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "Can I watch anime together with other users on OtakuCafe?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "Yes! OtakuCafe features Episode Rooms where you can watch anime together with other fans in real-time, discuss scenes as they happen, and share reactions. It's like having a virtual anime watch party with fellow otaku from around the world."
+                            }
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "How is OtakuCafe different from AI anime chatbots?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "Unlike AI anime chatbot platforms like Character.AI or CrushOn AI, OtakuCafe connects you with real people — genuine anime fans from around the world. You get authentic conversations, real recommendations, and the chance to build lasting friendships with fellow otaku, not scripted AI responses."
+                            }
+                        }
+                    ]
+                },
+                {
+                    "@type": "WebPage",
+                    "name": "OtakuCafe - Talk to Real Anime Fans & Strangers | Free Anime Chat",
+                    "url": "https://otakucafe.fun/",
+                    "datePublished": "2025-06-01",
+                    "dateModified": "2026-05-04",
+                    "inLanguage": "en",
+                    "speakable": {
+                        "@type": "SpeakableSpecification",
+                        "cssSelector": ["h1", ".hero-description", ".faq-answer"]
+                    }
+                }
+            ]
         }
         </script>
         
-        <title>OtakuCafe - Talk to Anime Fans & Strangers | Free Anime Chat</title>
+        <title>OtakuCafe - Talk to Real Anime Fans & Strangers | Free Anime Chat</title>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>

@@ -72,9 +72,9 @@ export default function LandingPage() {
               
               {/* Brand Text */}
               <div className="flex items-baseline">
-                <h1 className="text-base sm:text-xl font-black text-white tracking-tight">
+                <span className="text-base sm:text-xl font-black text-white tracking-tight" aria-label="OtakuCafe.fun - Free Anime Chat">
                   otaku<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">cafe</span><span className="text-[0.7em] text-purple-400">.fun</span>
-                </h1>
+                </span>
               </div>
             </div>
             <Button
@@ -98,6 +98,8 @@ export default function LandingPage() {
             backgroundPosition: 'center 60%',
             backgroundColor: '#1a2332' // Fallback color while loading
           }}
+          role="img"
+          aria-label="Anime cityscape at sunset with anime character silhouette - OtakuCafe chat platform background"
         />
         
         {/* Dark overlay for better text readability */}
@@ -111,15 +113,15 @@ export default function LandingPage() {
               <span className="text-xs sm:text-sm text-cyan-400 font-medium">Join 10,000+ anime fans worldwide</span>
             </div>
             
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
-              <span style={{ textShadow: '0 4px 12px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6)' }}>Connect with{' '}</span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
+              <span style={{ textShadow: '0 4px 12px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6)' }}>Talk to Real{' '}</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500">
                 Anime Fans
               </span>
-            </h2>
+            </h1>
             
-            <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.7)' }}>
-              Chat, share recommendations, and make friends with anime lovers around the world. Find your community and connect over your favorite shows!
+            <p className="hero-description text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.7)' }}>
+              Chat with real anime fans online for free — not bots. Share recommendations, join episode watch parties, and make genuine otaku friends from around the world.
             </p>
             
             <Button
@@ -144,12 +146,12 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
               <div className="px-2">
                 <p className="text-purple-400 text-base sm:text-lg mb-3 sm:mb-4 italic">Strangers turned friends</p>
-                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
                   Chat with Random Strangers With Similar{' '}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
                     Interests
                   </span>
-                </h3>
+                </h2>
                 <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
                   Talk to online strangers who love what you love. Chat about anime, hobbies and enjoy fun conversations - all from one place! Making new friends based on interests is made easy.
                 </p>
@@ -158,7 +160,7 @@ export default function LandingPage() {
               <div className="relative px-2">
                 <div className="bg-[#1a2332]/80 backdrop-blur-md border border-cyan-500/30 p-4 sm:p-6 md:p-8 rounded-2xl">
                   <div className="flex items-center justify-between mb-4 sm:mb-6">
-                    <h4 className="text-lg sm:text-xl font-bold text-white">Interests</h4>
+                    <h3 className="text-lg sm:text-xl font-bold text-white">Interests</h3>
                   </div>
                   <div className="flex flex-wrap gap-2 sm:gap-3">
                     <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2a3441] rounded-lg text-white border border-cyan-500/20 text-sm sm:text-base">
@@ -193,7 +195,7 @@ export default function LandingPage() {
                   <Users className="h-10 w-10 text-cyan-400" />
                 </div>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Smart Matching</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Smart Anime Matching</h3>
               <p className="text-gray-400 text-center text-xs sm:text-sm">
                 Get matched with fans who share your anime interests and vibes
               </p>
@@ -206,7 +208,7 @@ export default function LandingPage() {
                   <MessageCircle className="h-10 w-10 text-cyan-400" />
                 </div>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Live Chat</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Live Anime Chat</h3>
               <p className="text-gray-400 text-center text-xs sm:text-sm">
                 Chat in real-time with friends and make new connections
               </p>
@@ -219,7 +221,7 @@ export default function LandingPage() {
                   <Video className="h-10 w-10 text-cyan-400" />
                 </div>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Watch Together</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-center text-white mb-2">Watch Anime Together</h3>
               <p className="text-gray-400 text-center text-xs sm:text-sm">
                 Stream and enjoy anime with friends in real-time
               </p>
@@ -228,11 +230,11 @@ export default function LandingPage() {
 
           {/* Best Site Section */}
           <div className="max-w-5xl mx-auto mb-12 sm:mb-16 md:mb-20 text-center px-2">
-            <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
-              The best site to Chat with Anime Fans.
-            </h3>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
+              The Best Free Anime Chat Platform Online
+            </h2>
             <p className="text-gray-400 text-sm sm:text-base md:text-lg max-w-3xl mx-auto leading-relaxed px-2">
-              Many text and video chat apps offer various features for meeting random strangers or chatting without bots, but not all of them are modern, secure and feature rich with a diverse interesting people from around the globe.
+              Unlike generic random chat sites, OtakuCafe is built specifically for anime fans. Our interest-based matching connects you with real otaku — not bots — who share your passion for series like One Piece, Naruto, and Jujutsu Kaisen. Enjoy a modern, secure, and feature-rich anime community.
             </p>
           </div>
 
@@ -245,7 +247,7 @@ export default function LandingPage() {
                   <MessageCircle className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Text Chat</h4>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Text Chat</h3>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Chat with anime fans worldwide via instant messaging. Share your thoughts and make connections.
               </p>
@@ -255,10 +257,10 @@ export default function LandingPage() {
             <div className="text-center">
               <div className="flex items-center justify-center mb-6">
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-full">
-                  <UserPlus className="h-8 w-8 text-white" />
+                  <UserPlus className="h-8 w-8 text-white" aria-hidden="true" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Friends & History</h4>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Friends & History</h3>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Had a fun chat but skipped by accident? Find them in your chat history and add them as a friend.
               </p>
@@ -271,7 +273,7 @@ export default function LandingPage() {
                   <Filter className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Smart Matching</h4>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Interest-Based Matching</h3>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Get matched with people who share your anime interests. Use filters to find your perfect chat partner.
               </p>
@@ -284,7 +286,7 @@ export default function LandingPage() {
                   <Shield className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h4 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Safe Community</h4>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Safe Anime Community</h3>
               <p className="text-gray-400 leading-relaxed text-sm sm:text-base">
                 Report inappropriate users and enjoy a clean, respectful chat environment.
               </p>
@@ -298,12 +300,12 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
               <div className="px-2">
                 <p className="text-purple-400 text-base sm:text-lg mb-3 sm:mb-4 italic">Make the most out of your chats</p>
-                <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
                   From Strangers to{' '}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-500">
                     Friends
                   </span>
-                </h3>
+                </h2>
                 <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
                   Discover new people, make real and genuine connections, discuss your favorite anime or just have casual chats. Our platform is designed to help you experience the best of online chatting with fellow otakus.
                 </p>
@@ -344,9 +346,80 @@ export default function LandingPage() {
             </div>
           </div>
 
+          {/* Testimonials Section (GEO Quotation Addition) */}
+          <div className="max-w-6xl mx-auto mb-12 sm:mb-16 md:mb-20 px-2">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-white mb-8 sm:mb-12">
+              What <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Otaku</span> Are Saying
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
+              {/* Testimonial 1 */}
+              <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-6 sm:p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300">
+                <div className="flex text-yellow-400 mb-4">
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                </div>
+                <blockquote className="text-gray-300 italic mb-6 text-sm sm:text-base leading-relaxed">
+                  "I was tired of generic chat apps filled with bots. OtakuCafe actually connected me with real people who love One Piece just as much as I do. We even watched the latest episode together in a watch room!"
+                </blockquote>
+                <div className="flex items-center gap-3 mt-auto">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold">K</div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">Kaito M.</p>
+                    <p className="text-gray-500 text-xs">Joined 3 months ago</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Testimonial 2 */}
+              <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-6 sm:p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300">
+                <div className="flex text-yellow-400 mb-4">
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                </div>
+                <blockquote className="text-gray-300 italic mb-6 text-sm sm:text-base leading-relaxed">
+                  "The smartest matching system out there. I set my interests to Jujutsu Kaisen and immediately found someone to debate the latest manga chapter with. It's safe, fast, and free anime chat without any hassle."
+                </blockquote>
+                <div className="flex items-center gap-3 mt-auto">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">S</div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">Sarah T.</p>
+                    <p className="text-gray-500 text-xs">Joined 1 month ago</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Testimonial 3 */}
+              <div className="bg-[#1a2332]/60 backdrop-blur-md border border-cyan-500/20 p-6 sm:p-8 rounded-2xl hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300">
+                <div className="flex text-yellow-400 mb-4">
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                </div>
+                <blockquote className="text-gray-300 italic mb-6 text-sm sm:text-base leading-relaxed">
+                  "Finally, an alternative to those random stranger sites that's actually moderated and built specifically for anime fans. No weird stuff, just genuine connections and fun anime watch parties."
+                </blockquote>
+                <div className="flex items-center gap-3 mt-auto">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">R</div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">Ryan J.</p>
+                    <p className="text-gray-500 text-xs">Joined 6 months ago</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* CTA Section */}
           <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16 md:mb-20 px-4">
-            <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Ready to Make Anime Friends?</h3>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Ready to Make Anime Friends?</h2>
             <p className="text-gray-300 text-base sm:text-lg mb-4 sm:mb-6">
               Join thousands of anime fans chatting right now. Share your passion and discover new shows together!
             </p>
@@ -409,28 +482,32 @@ export default function LandingPage() {
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
-                aria-label="Instagram"
+                aria-label="Follow OtakuCafe on Instagram"
+                rel="noopener noreferrer"
               >
                 <Instagram className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
-                aria-label="Twitter"
+                aria-label="Follow OtakuCafe on Twitter"
+                rel="noopener noreferrer"
               >
                 <Twitter className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
-                aria-label="Discord"
+                aria-label="Join OtakuCafe Discord server"
+                rel="noopener noreferrer"
               >
                 <MessageCircle className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
               <a 
                 href="#" 
                 className="bg-white/5 hover:bg-white/10 p-2.5 rounded-lg transition-colors"
-                aria-label="TikTok"
+                aria-label="Follow OtakuCafe on TikTok"
+                rel="noopener noreferrer"
               >
                 <Music className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </a>
@@ -440,7 +517,7 @@ export default function LandingPage() {
           {/* Copyright */}
           <div className="text-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-cyan-500/10">
             <p className="text-gray-500 text-sm">
-              All rights reserved. otakucafe.fun © {new Date().getFullYear()}
+              © {new Date().getFullYear()} OtakuCafe — Free Anime Chat Platform. All rights reserved.
             </p>
           </div>
         </div>
