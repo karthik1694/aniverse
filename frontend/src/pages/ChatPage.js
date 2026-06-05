@@ -22,6 +22,50 @@ import { watchlist } from '../utils/watchlist';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
+/** Read a File as a data URL. */
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Resize + compress an image to keep payloads small before sending over the
+ * socket (a 5MB photo becomes ~100–400KB). Returns a JPEG data URL.
+ */
+async function compressImageFile(file, maxDim = 1280, quality = 0.72) {
+  const dataUrl = await fileToDataUrl(file);
+  const img = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = dataUrl;
+  });
+
+  let { width, height } = img;
+  if (width > maxDim || height > maxDim) {
+    if (width >= height) {
+      height = Math.round((height * maxDim) / width);
+      width = maxDim;
+    } else {
+      width = Math.round((width * maxDim) / height);
+      height = maxDim;
+    }
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0f1419'; // flatten transparency on a dark bg
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 /**
  * "+N" overflow chip that reveals the hidden items in a popover.
  * Opens on hover (desktop) and on tap (mobile) — touch devices don't hover.
@@ -508,25 +552,38 @@ export default function ChatPage({ user, setUser, openSettings, openMenu, notifi
     }
   };
 
-  const handleImageSelect = (e) => {
+  const handleImageSelect = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error('Image size must be less than 5MB');
-        return;
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image too large. Please pick one under 10MB.');
+      return;
+    }
+
+    try {
+      let preview;
+      if (file.type === 'image/gif') {
+        // Don't canvas-compress GIFs (would lose animation); cap size instead
+        if (file.size > 2 * 1024 * 1024) {
+          toast.error('GIFs must be under 2MB.');
+          return;
+        }
+        preview = await fileToDataUrl(file);
+      } else {
+        preview = await compressImageFile(file);
       }
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImage({
-          file,
-          preview: e.target.result
-        });
-      };
-      reader.readAsDataURL(file);
+      setSelectedImage({ file, preview });
+    } catch (err) {
+      console.error('Image processing failed:', err);
+      toast.error('Could not process that image. Try another one.');
+    } finally {
+      // Allow re-selecting the same file
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 

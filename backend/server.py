@@ -51,8 +51,8 @@ sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins='*',
     cors_credentials=True,
-    logger=True,
-    engineio_logger=True,
+    logger=os.getenv('SOCKET_DEBUG', 'false').lower() == 'true',
+    engineio_logger=os.getenv('SOCKET_DEBUG', 'false').lower() == 'true',
     ping_timeout=60,
     ping_interval=25,
     max_http_buffer_size=10000000  # 10MB max message size for images
@@ -69,6 +69,10 @@ socket_app = socketio.ASGIApp(
 active_users: Dict[str, Dict] = {}  # user_id -> {sid, user_data}
 matching_queue: List[Dict] = []  # Users waiting to be matched
 active_matches: Dict[str, Dict] = {}  # sid -> {partner_sid, user_id, partner_id}
+
+# In-memory message-stat counters, flushed to the DB periodically so we don't
+# perform a DB write (passport + arc) on every single chat message.
+pending_message_stats: Dict[str, int] = {}  # user_id -> messages since last flush
 
 # Store episode room connections
 episode_room_users: Dict[str, Dict] = {}  # sid -> {room_id, user_id, user_data}
@@ -416,6 +420,33 @@ async def cleanup_expired_rooms():
             logging.error(f"Error in cleanup_expired_rooms: {e}", exc_info=True)
 
 
+async def _flush_message_stats_once():
+    """Flush accumulated per-user message counts to the DB in one batch."""
+    if db is None or not pending_message_stats:
+        return
+    # Snapshot and clear immediately so new messages keep counting
+    snapshot = dict(pending_message_stats)
+    pending_message_stats.clear()
+    for user_id, count in snapshot.items():
+        if count <= 0:
+            continue
+        try:
+            await update_passport_stats(user_id, {"messages_sent": count})
+            await update_user_stats(user_id, "messages_sent", count)
+        except Exception as e:
+            logging.error(f"Error flushing message stats for {user_id}: {e}")
+
+
+async def flush_message_stats():
+    """Background task: batch-write message stats every 20s instead of per message."""
+    while True:
+        try:
+            await asyncio.sleep(20)
+            await _flush_message_stats_once()
+        except Exception as e:
+            logging.error(f"Error in flush_message_stats: {e}", exc_info=True)
+
+
 @app.on_event("startup")
 async def startup_event():
     global db
@@ -446,6 +477,8 @@ async def startup_event():
         
         # Start background cleanup task (will handle db=None gracefully)
         asyncio.create_task(cleanup_expired_rooms())
+        # Start background task that batches message-stat DB writes
+        asyncio.create_task(flush_message_stats())
         logging.info("✅ Application startup completed successfully")
         
     except Exception as e:
@@ -472,6 +505,10 @@ async def shutdown_event():
         logging.info("✅ Database connection closed successfully")
     except Exception as e:
         logging.error(f"❌ Error during shutdown: {e}")
+    try:
+        await _flush_message_stats_once()
+    except Exception as e:
+        logging.error(f"❌ Error flushing message stats on shutdown: {e}")
     try:
         await anime_catalog.close_client()
     except Exception as e:
@@ -3141,14 +3178,10 @@ async def send_message(sid, data):
         await sio.emit('message_sent', message_data, room=sid)
         logging.info(f"Message echoed back to sender {sid}, has_image: {message_data.get('image') is not None}")
         
-        # Update passport stats for messages sent
-        try:
-            await update_passport_stats(match_info['user_id'], {"messages_sent": 1})
-        except Exception as e:
-            logging.error(f"Error updating passport stats for message: {e}")
-        
-        # Update arc progression for message sender
-        await update_user_stats(match_info['user_id'], "messages_sent", 1)
+        # Count this message in memory; a background task flushes passport + arc
+        # stats to the DB in batches (avoids 2 DB writes on every message).
+        uid = match_info['user_id']
+        pending_message_stats[uid] = pending_message_stats.get(uid, 0) + 1
         
     except Exception as e:
         logging.error(f"Error in send_message: {e}", exc_info=True)
