@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
-import { Button } from './ui/button';
+import { X } from 'lucide-react';
 
 /**
  * Banner that appears at the top for anonymous users
@@ -29,18 +28,18 @@ export default function ClaimAccountBanner({ onClaim, onDismiss }) {
   return (
     <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-0.5 shadow-sm relative z-50">
       <div className="flex items-center justify-center gap-2">
-        <p className="text-[10px] sm:text-xs">
+        <p className="text-[7px] sm:text-xs leading-none">
           You're using an anonymous account.
         </p>
-        <Button
+        <button
           onClick={handleClaim}
-          className="bg-white/20 hover:bg-white/30 text-white font-medium px-2 py-0 rounded text-[10px] sm:text-xs transition-all duration-200 h-4 border border-white/30"
+          className="btn-inline bg-white/20 hover:bg-white/30 text-white font-medium px-2 py-0 rounded text-[10px] sm:text-xs transition-colors border border-white/30 leading-none"
         >
           Claim Account
-        </Button>
+        </button>
         <button
           onClick={handleDismiss}
-          className="text-white/70 hover:text-white transition-colors"
+          className="btn-inline text-white/70 hover:text-white transition-colors leading-none"
           aria-label="Dismiss banner"
         >
           <X className="h-3 w-3" />
