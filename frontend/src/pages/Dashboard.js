@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { MessageCircle, Instagram, Twitter, Menu, Users, Bell, X, Check } from 'lucide-react';
+import { MessageCircle, Instagram, Twitter, Users, Bell, X, Check, PanelLeft } from 'lucide-react';
 import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import UserAvatar from '../components/UserAvatar';
@@ -153,14 +153,14 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
   };
 
   return (
-    <div className="fixed inset-0 md:relative md:h-full bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex flex-col overflow-auto z-[60] md:z-auto">
-      {/* Mobile chat menu button (opens the chat sidebar) */}
+    <div className="relative h-full bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex flex-col overflow-auto">
+      {/* Chat panel toggle (mobile) — sits below the site header, opens Friends/DMs */}
       <button
         onClick={onOpenMenu}
-        className="md:hidden absolute top-3 left-3 z-[70] text-gray-300 hover:text-white p-1.5 bg-[#1a2332]/80 border border-white/10 rounded-lg"
-        aria-label="Open chat menu"
+        className="md:hidden absolute top-3 left-3 z-[70] flex items-center gap-1.5 text-gray-300 hover:text-white px-2.5 py-1.5 bg-[#1a2332]/80 border border-white/10 rounded-lg text-xs"
+        aria-label="Open friends and messages"
       >
-        <Menu className="h-5 w-5" />
+        <PanelLeft className="h-4 w-4" /> Chats
       </button>
 
       {/* Floating quick actions: friend requests + notifications */}

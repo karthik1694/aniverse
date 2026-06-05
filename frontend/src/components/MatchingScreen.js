@@ -200,14 +200,14 @@ const MatchingScreen = ({
   const renderStats = () => {
     // Always show online users count - not just when matching
     const onlineNow = onlineUsersCount || 0;
-    
+
     return (
-      <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <Badge className="bg-green-500/20 text-green-300 px-2 sm:px-3 py-1 text-xs sm:text-sm animate-pulse">
-          <Users className="h-3 w-3 mr-1" />
+      <div className="flex justify-center mb-4 sm:mb-6">
+        <div className="inline-flex items-center gap-1.5 bg-green-500/15 border border-green-500/30 text-green-300 px-3 py-1.5 rounded-full text-xs sm:text-sm">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           <span className="font-semibold">{onlineNow}</span>
-          <span className="ml-1">online now</span>
-        </Badge>
+          <span>online now</span>
+        </div>
       </div>
     );
   };
@@ -262,7 +262,7 @@ const MatchingScreen = ({
   };
 
   return (
-    <div className="fixed inset-0 md:relative md:h-full flex flex-col bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] overflow-hidden z-[60] md:z-auto">
+    <div className="relative h-full flex flex-col bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] overflow-hidden">
       {/* Header - Mobile and Desktop */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/30 flex-shrink-0">
         <div className="flex items-center gap-3">

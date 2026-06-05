@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
-import { MessageCircle, Users, Plus, Settings, LogOut, PanelLeft } from 'lucide-react';
+import { MessageCircle, Users, Plus, Settings, LogOut } from 'lucide-react';
 import UserArc from './UserArc';
 import PremiumUpgrade from './PremiumUpgrade';
 import ArcProgressionNotification from './ArcProgressionNotification';
@@ -362,36 +362,17 @@ export default function MainLayout({ user, setUser, children }) {
         />
       )}
       
-      <SiteHeader
-        user={user}
-        setUser={setUser}
-        leftSlot={
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden p-2 -ml-1 text-gray-300 hover:text-white"
-            aria-label="Open chat menu"
-          >
-            <PanelLeft className="h-5 w-5" />
-          </button>
-        }
-      />
+      <SiteHeader user={user} setUser={setUser} />
 
-      <div className="flex-1 flex overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
+      <div className="flex-1 flex overflow-hidden relative">
+      {/* Mobile Sidebar Overlay (scoped below the header) */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[70]">
+        <div className="md:hidden absolute inset-0 z-[80]">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f1419] border-r border-gray-800/50 flex flex-col">
-            {/* Mobile Sidebar Content - Same as desktop sidebar */}
-            <div className="p-4 border-b border-gray-800/50">
-              <h1 className="text-xl font-bold text-white">
-                otakucafe<span className="text-sm text-gray-400">.fun</span>
-              </h1>
-            </div>
-
+          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f1419] border-r border-gray-800/50 flex flex-col animate-slide-in-left">
             {/* Navigation Tabs */}
             <div className="p-3 border-b border-gray-800/50">
               <div className="flex gap-2">

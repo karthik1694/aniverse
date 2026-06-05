@@ -736,7 +736,7 @@ export default function ChatPage({ user, setUser, openSettings, openMenu, notifi
 
   return (
     <>
-      <div className="fixed inset-0 md:relative md:h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] z-[60] md:z-auto">
+      <div className="relative h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419]">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Floating Particles */}
