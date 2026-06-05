@@ -752,6 +752,7 @@ export default function ChatPage({ user, setUser, openSettings, openMenu, notifi
           onStartChat={beginMatchFlow}
           onManageInterests={openSettings}
           onOpenMenu={openMenu}
+          onlineUsersCount={onlineUsersCount}
           notifications={notifications}
           clearNotification={clearNotification}
           markNotificationRead={markNotificationRead}
