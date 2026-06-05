@@ -17,6 +17,8 @@ div[style*="position: fixed"][style*="bottom: 1rem"][style*="right: 1rem"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
+}
+
 /* Typing Indicator Animations */
 @keyframes typing-dot {
   0%, 60%, 100% {
@@ -167,5 +169,4 @@ div[style*="position: fixed"][style*="bottom: 1rem"][style*="right: 1rem"] {
 
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
-}
 }

@@ -233,9 +233,9 @@ export default function CommunityPage({ user, setUser }) {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex-shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg shadow-cyan-500/30"
+          className="flex-shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-lg shadow-lg shadow-cyan-500/30"
         >
-          <Plus className="w-4 h-4" /> Create Post
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Create Post</span><span className="sm:hidden">Post</span>
         </button>
       </div>
 

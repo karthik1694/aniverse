@@ -34,10 +34,10 @@ function WatchlistControl({ anime }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
           entry
             ? 'bg-green-500/15 text-green-400 border border-green-500/40'
             : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
@@ -50,7 +50,7 @@ function WatchlistControl({ anime }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 mt-2 w-52 bg-[#1a2332] border border-white/10 rounded-xl shadow-xl py-1 z-50">
+          <div className="absolute left-0 right-0 sm:right-auto mt-2 sm:w-52 bg-[#1a2332] border border-white/10 rounded-xl shadow-xl py-1 z-50">
             {STATUS_ORDER.map((status) => (
               <button
                 key={status}
@@ -340,14 +340,14 @@ export default function AnimeDetailPage({ user, setUser }) {
               </div>
 
               {/* Actions */}
-              <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-6">
                 <WatchlistControl anime={anime} />
                 {anime.trailer_url && (
                   <a
                     href={anime.trailer_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors w-full sm:w-auto"
                   >
                     <Play className="w-4 h-4" /> Watch Trailer
                   </a>

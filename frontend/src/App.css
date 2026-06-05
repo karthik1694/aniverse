@@ -179,10 +179,10 @@ button:active {
 
 /* Mobile-specific improvements */
 @media (max-width: 768px) {
-  /* Improve touch targets */
-  button, .button, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+  /* Comfortable tap height for primary controls without forcing tiny
+     inline buttons (chips, vote arrows, +N) into oversized squares. */
+  button:not(.btn-inline), .button, [role="button"]:not(.btn-inline) {
+    min-height: 40px;
   }
   
   /* Better text readability on mobile */
@@ -254,11 +254,6 @@ button:active {
 @media (max-width: 375px) {
   html {
     font-size: 14px;
-  }
-  
-  button, .button {
-    min-height: 40px;
-    min-width: 40px;
   }
 }
 

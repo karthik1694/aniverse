@@ -61,7 +61,7 @@ function WatchlistRow({ entry, onChange }) {
           <button
             onClick={() => adjustProgress(-1)}
             disabled={(entry.progress || 0) <= 0}
-            className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 disabled:opacity-30 flex items-center justify-center text-gray-300"
+            className="btn-inline w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 disabled:opacity-30 flex items-center justify-center text-gray-300"
           >
             <Minus className="w-3 h-3" />
           </button>
@@ -70,7 +70,7 @@ function WatchlistRow({ entry, onChange }) {
           </span>
           <button
             onClick={() => adjustProgress(1)}
-            className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300"
+            className="btn-inline w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300"
           >
             <Plus className="w-3 h-3" />
           </button>

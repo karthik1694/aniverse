@@ -38,7 +38,7 @@ function OverflowChip({ extra, hiddenItems, cls }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-xs px-2 py-0.5 rounded-md border border-white/10 text-gray-300 bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors"
+        className="btn-inline text-xs px-2 py-0.5 rounded-md border border-white/10 text-gray-300 bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors"
       >
         +{extra}
       </button>
