@@ -95,6 +95,10 @@ class User(BaseModel):
     premium: bool = False
     username_changes: int = 0  # Track number of username changes (max 3)
     isAnonymous: bool = False  # Track if user is anonymous
+    # Settings / preferences (must be declared so they round-trip in API responses)
+    show_online_status: bool = True
+    allow_friend_requests: bool = True
+    gender_filter: Optional[str] = "both"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserSession(BaseModel):
@@ -193,6 +197,10 @@ class ProfileUpdate(BaseModel):
     favorite_genres: Optional[List[str]] = None
     favorite_themes: Optional[List[str]] = None
     favorite_characters: Optional[List[str]] = None
+    # Settings / preferences (persisted so the toggles aren't lost)
+    show_online_status: Optional[bool] = None
+    allow_friend_requests: Optional[bool] = None
+    gender_filter: Optional[str] = None
 
 class UserReport(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1019,12 +1027,125 @@ async def logout(request: Request, response: Response):
     response.delete_cookie("session_token", path="/")
     return {"message": "Logged out"}
 
-@api_router.get("/anime")
-async def get_anime(q: Optional[str] = None, request: Request = None):
+@api_router.post("/auth/migrate-anonymous")
+async def migrate_anonymous_account(request: Request):
+    """Migrate an anonymous user's data into the currently authenticated
+    (just-claimed) account: interests, friendships, pending friend requests
+    and direct-message history. Called once, right after OAuth claim."""
+    # The caller must be an authenticated, non-anonymous user.
     user = await get_current_user(request)
     if not user:
-        raise HTTPException(status_code=401)
-    
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
+
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
+    anon_id = (body or {}).get('anonymous_user_id')
+    anon_data = (body or {}).get('anonymous_user_data') or {}
+
+    if not anon_id:
+        raise HTTPException(status_code=400, detail="anonymous_user_id is required")
+
+    # Security guard: only anonymous accounts can be migrated, and never the
+    # caller's own id. This prevents an authenticated user from re-pointing a
+    # real account's social graph onto themselves.
+    if not str(anon_id).startswith('anon_'):
+        raise HTTPException(status_code=400, detail="Not an anonymous account")
+    if anon_id == user.id:
+        return {"message": "Nothing to migrate", "migrated": False}
+
+    new_id = user.id
+    summary = {"friendships": 0, "friend_requests": 0, "messages": 0, "interests_merged": False}
+
+    # 1) Merge interests into the claimed account (union, keeping existing).
+    #    Prefer client-supplied data since the anon user may never have been
+    #    persisted to the database.
+    anon_doc = await db.users.find_one({"id": anon_id}, {"_id": 0})
+    interest_source = anon_data if anon_data else (anon_doc or {})
+
+    merged_update = {}
+    for field in ("favorite_anime", "favorite_genres", "favorite_themes", "favorite_characters"):
+        anon_list = interest_source.get(field) or []
+        if not isinstance(anon_list, list) or not anon_list:
+            continue
+        current = list(getattr(user, field, None) or [])
+        union = list(current)
+        for item in anon_list:
+            if item not in union:
+                union.append(item)
+        if union != current:
+            merged_update[field] = union
+
+    # Carry over bio / gender if the claimed account doesn't have them yet.
+    if not (user.bio or "").strip() and (interest_source.get("bio") or "").strip():
+        merged_update["bio"] = interest_source["bio"]
+    if not user.gender and interest_source.get("gender"):
+        merged_update["gender"] = interest_source["gender"]
+
+    if merged_update:
+        await db.users.update_one({"id": new_id}, {"$set": merged_update})
+        summary["interests_merged"] = True
+
+    # If the anon user was never persisted, there is no social graph to move.
+    if not anon_doc:
+        logging.info(f"✅ Migrated anonymous interests {anon_id} -> {new_id} (no DB social graph)")
+        return {"message": "Interests migrated", "migrated": True, "summary": summary}
+
+    # 2) Re-point friendships from the anon id to the claimed account.
+    r1 = await db.friendships.update_many({"user1_id": anon_id}, {"$set": {"user1_id": new_id}})
+    r2 = await db.friendships.update_many({"user2_id": anon_id}, {"$set": {"user2_id": new_id}})
+    summary["friendships"] = (r1.modified_count or 0) + (r2.modified_count or 0)
+
+    # Drop any self-friendship created by re-pointing.
+    await db.friendships.delete_many({"user1_id": new_id, "user2_id": new_id})
+
+    # De-duplicate friendships involving the claimed account.
+    seen_pairs = set()
+    dupes = []
+    existing_friendships = await db.friendships.find(
+        {"$or": [{"user1_id": new_id}, {"user2_id": new_id}]}, {"_id": 0}
+    ).to_list(1000)
+    for f in existing_friendships:
+        other = f["user2_id"] if f["user1_id"] == new_id else f["user1_id"]
+        if other in seen_pairs:
+            dupes.append(f["id"])
+        else:
+            seen_pairs.add(other)
+    if dupes:
+        await db.friendships.delete_many({"id": {"$in": dupes}})
+
+    # 3) Re-point friend requests (incoming + outgoing).
+    fr1 = await db.friend_requests.update_many({"from_user_id": anon_id}, {"$set": {"from_user_id": new_id}})
+    fr2 = await db.friend_requests.update_many({"to_user_id": anon_id}, {"$set": {"to_user_id": new_id}})
+    summary["friend_requests"] = (fr1.modified_count or 0) + (fr2.modified_count or 0)
+    # Drop any request that became a self-request.
+    await db.friend_requests.delete_many({"from_user_id": new_id, "to_user_id": new_id})
+
+    # 4) Re-point direct-message history.
+    m1 = await db.direct_messages.update_many({"from_user_id": anon_id}, {"$set": {"from_user_id": new_id}})
+    m2 = await db.direct_messages.update_many({"to_user_id": anon_id}, {"$set": {"to_user_id": new_id}})
+    summary["messages"] = (m1.modified_count or 0) + (m2.modified_count or 0)
+
+    # 5) Clean up the throwaway anonymous records.
+    await db.users.delete_one({"id": anon_id})
+    await db.user_arcs.delete_many({"user_id": anon_id})
+    await db.passport_stats.delete_many({"user_id": anon_id})
+    await db.passport_journeys.delete_many({"user_id": anon_id})
+
+    logging.info(f"✅ Migrated anonymous account {anon_id} -> {new_id}: {summary}")
+    return {"message": "Account data migrated", "migrated": True, "summary": summary}
+
+@api_router.get("/anime")
+async def get_anime(q: Optional[str] = None, request: Request = None):
+    # Public: the interests picker (incl. anonymous users) needs this list.
+    if db is None:
+        return []
     if q:
         anime_list = await db.anime_data.find(
             {"title": {"$regex": q, "$options": "i"}},
@@ -1196,6 +1317,10 @@ async def send_friend_request(to_user_id: str, request: Request):
         if not target_user:
             logging.error(f"❌ Target user not found: {to_user_id}")
             raise HTTPException(status_code=404, detail="User not found. They may have disconnected.")
+
+        # Respect the target's "Allow Friend Requests" privacy setting
+        if target_user.get('allow_friend_requests') is False:
+            raise HTTPException(status_code=403, detail="This user isn't accepting friend requests")
         
         # Check if already friends
         existing = await db.friendships.find_one({
@@ -1310,6 +1435,39 @@ async def get_friend_requests(request: Request):
                 "from_user": User(**from_user_doc).dict()
             })
     
+    return result
+
+@api_router.get("/friend-requests/sent")
+async def get_sent_friend_requests(request: Request):
+    """Return the pending friend requests the current user has sent (outgoing)."""
+    logging.info("🔵 Get sent friend requests endpoint called")
+
+    # Try to get authenticated user, fall back to anonymous user_id query param
+    user = await get_current_user(request)
+    if not user:
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="User not found")
+        user = User(**user_doc)
+
+    requests = await db.friend_requests.find(
+        {"from_user_id": user.id, "status": "pending"},
+        {"_id": 0}
+    ).to_list(50)
+
+    result = []
+    for req in requests:
+        to_user_doc = await db.users.find_one({"id": req['to_user_id']}, {"_id": 0})
+        # Keep a flat shape that includes to_user_id so the client can match easily
+        entry = dict(req)
+        if to_user_doc:
+            entry["to_user"] = User(**to_user_doc).dict()
+        result.append(entry)
+
+    logging.info(f"📤 Found {len(result)} sent friend requests for {user.name}")
     return result
 
 @api_router.post("/friend-requests/{request_id}/accept")

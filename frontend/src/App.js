@@ -23,7 +23,7 @@ import MainLayout from "./components/MainLayout";
 import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
 import { Toaster } from "./components/ui/sonner";
 import { axiosInstance, BACKEND_URL, API } from "./api/axiosInstance";
-import { createAnonymousSession, getAnonymousSession } from "./utils/anonymousAuth";
+import { createAnonymousSession, getAnonymousSession, clearAnonymousSession } from "./utils/anonymousAuth";
 
 function AuthWrapper() {
   const [user, setUser] = useState(null);
@@ -74,6 +74,41 @@ function AuthWrapper() {
           localStorage.setItem('user_id', userData.id);
           localStorage.setItem('user_email', userData.email);
           localStorage.setItem('session_token', response.data.session_token);
+
+          // If the user just claimed an anonymous account, migrate its data
+          // (interests, friends, pending requests, chat history) into the new
+          // account before clearing the anonymous session.
+          const pendingAnonId = localStorage.getItem('pending_claim_anon_id');
+          if (pendingAnonId) {
+            let anonData = null;
+            try {
+              anonData = JSON.parse(localStorage.getItem('pending_claim_anon_data'));
+            } catch (e) {
+              // ignore malformed cache
+            }
+            try {
+              const migrateRes = await axiosInstance.post('auth/migrate-anonymous', {
+                anonymous_user_id: pendingAnonId,
+                anonymous_user_data: anonData
+              });
+              console.log('✅ Anonymous data migrated to claimed account:', migrateRes.data);
+
+              // Refresh the user so merged interests/bio show up immediately.
+              try {
+                const refreshed = await axiosInstance.get('auth/me');
+                setUser(refreshed.data);
+              } catch (refreshError) {
+                console.warn('Could not refresh user after migration:', refreshError);
+              }
+            } catch (migrateError) {
+              // Non-fatal: the account is still claimed, just without migrated data.
+              console.error('Anonymous migration failed (continuing):', migrateError);
+            } finally {
+              localStorage.removeItem('pending_claim_anon_id');
+              localStorage.removeItem('pending_claim_anon_data');
+              clearAnonymousSession();
+            }
+          }
 
           // Clean URL and land on the home/discover page.
           // Gender + interests are collected later, inside the Chat flow.

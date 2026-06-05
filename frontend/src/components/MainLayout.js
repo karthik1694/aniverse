@@ -111,6 +111,20 @@ export default function MainLayout({ user, setUser, children }) {
           }
         }
       });
+
+      // Also surface it in the notification bell
+      setNotifications(prev => [{
+        id: `msg_${notificationData.from_user_id || ''}_${Date.now()}`,
+        type: 'new_message',
+        message: `New message from ${notificationData.from_user_name}`,
+        user: notificationData.from_user_id ? {
+          id: notificationData.from_user_id,
+          name: notificationData.from_user_name,
+          picture: notificationData.from_user_picture
+        } : null,
+        timestamp: new Date().toISOString(),
+        read: false
+      }, ...prev]);
       
       // Update unread counts immediately
       if (activeTab === 'chat') {
@@ -128,6 +142,15 @@ export default function MainLayout({ user, setUser, children }) {
     newSocket.on('friend_request_received', async (data) => {
       console.log('📨 Real-time friend request received:', data);
       toast.info(`👋 ${data.from_user.name} sent you a friend request!`);
+      // Surface it in the notification bell
+      setNotifications(prev => [{
+        id: `freq_${data.request_id || data.from_user?.id || ''}_${Date.now()}`,
+        type: 'friend_request',
+        message: `${data.from_user.name} sent you a friend request`,
+        user: data.from_user,
+        timestamp: new Date().toISOString(),
+        read: false
+      }, ...prev]);
       // Reload friend requests using current user from ref
       try {
         const currentUser = userRef.current;
@@ -146,7 +169,7 @@ export default function MainLayout({ user, setUser, children }) {
       toast.success(`🎉 ${data.friend.name} accepted your friend request!`);
       // Add to notifications
       setNotifications(prev => [{
-        id: Date.now(),
+        id: `facc_${data.friend?.id || ''}_${Date.now()}`,
         type: 'friend_accepted',
         message: `${data.friend.name} accepted your friend request!`,
         user: data.friend,
@@ -346,6 +369,16 @@ export default function MainLayout({ user, setUser, children }) {
   };
 
   const handleClaimAccount = () => {
+    // Remember which anonymous account to migrate once OAuth returns, so the
+    // user keeps their interests, friends, requests and chat history.
+    try {
+      if (isAnonymousUser(user)) {
+        localStorage.setItem('pending_claim_anon_id', user.id);
+        localStorage.setItem('pending_claim_anon_data', JSON.stringify(user));
+      }
+    } catch (e) {
+      // localStorage may be unavailable; migration just won't run.
+    }
     // Redirect to OAuth login to claim the account
     const redirectUrl = `${window.location.origin}/`;
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;

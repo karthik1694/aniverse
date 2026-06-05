@@ -289,6 +289,16 @@ export default function SettingsModal({ user, setUser, onClose }) {
 
   // Handle claim account
   const handleClaimAccount = () => {
+    // Remember which anonymous account to migrate once OAuth returns, so the
+    // user keeps their interests, friends, requests and chat history.
+    try {
+      if (isAnonymousUser(user)) {
+        localStorage.setItem('pending_claim_anon_id', user.id);
+        localStorage.setItem('pending_claim_anon_data', JSON.stringify(user));
+      }
+    } catch (e) {
+      // localStorage may be unavailable; migration just won't run.
+    }
     const redirectUrl = `${window.location.origin}/`;
     console.log('Claiming account, redirecting to auth with URL:', redirectUrl);
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;

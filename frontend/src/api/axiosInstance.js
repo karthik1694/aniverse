@@ -26,6 +26,23 @@ const RETRY_DELAY = 1000;
 // Add request interceptor for debugging
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Attach the stored session token as a Bearer header fallback.
+    // The backend (get_current_user) accepts either the httpOnly cookie OR this
+    // Authorization header. In cross-site deployments the cookie is often blocked,
+    // so this keeps authenticated requests (profile, friends, messages) working
+    // after a user claims their account.
+    try {
+      const token = localStorage.getItem('session_token');
+      if (token && !token.startsWith('anon_token_')) {
+        config.headers = config.headers || {};
+        if (!config.headers.Authorization) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+    } catch (e) {
+      // localStorage may be unavailable in some contexts; ignore.
+    }
+
     console.log('📤 Axios Request:', {
       method: config.method,
       url: config.url,
