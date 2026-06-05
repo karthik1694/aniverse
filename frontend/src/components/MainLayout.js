@@ -4,13 +4,14 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
-import { MessageCircle, Users, Plus, Settings, LogOut, Crown, Menu } from 'lucide-react';
+import { MessageCircle, Users, Plus, Settings, LogOut, PanelLeft } from 'lucide-react';
 import UserArc from './UserArc';
 import PremiumUpgrade from './PremiumUpgrade';
 import ArcProgressionNotification from './ArcProgressionNotification';
 import UserAvatar from './UserAvatar';
 import ClaimAccountBanner from './ClaimAccountBanner';
 import SettingsModal from './SettingsModal';
+import SiteHeader from './SiteHeader';
 import { isAnonymousUser, clearAnonymousSession } from '../utils/anonymousAuth';
 import io from 'socket.io-client';
 import React from 'react';
@@ -361,44 +362,21 @@ export default function MainLayout({ user, setUser, children }) {
         />
       )}
       
-      <div className="flex-1 flex overflow-hidden">
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#1a1a2e]/95 backdrop-blur-sm border-b border-gray-800/50 z-50 px-3 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white p-1.5"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <h1 className="text-base font-semibold text-white">
-              New Chat
-            </h1>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white p-1.5"
-              onClick={() => setActiveTab('friends')}
-            >
-              <Users className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white p-1.5"
-              onClick={() => setShowSettingsModal(true)}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      <SiteHeader
+        user={user}
+        setUser={setUser}
+        leftSlot={
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden p-2 -ml-1 text-gray-300 hover:text-white"
+            aria-label="Open chat menu"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
+        }
+      />
 
+      <div className="flex-1 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[70]">
@@ -574,26 +552,6 @@ export default function MainLayout({ user, setUser, children }) {
               </div>
             </div>
 
-            {/* Premium Coming Soon Section */}
-            <div className="p-3 border-t border-gray-800/50">
-              <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Crown className="h-5 w-5 text-yellow-400" />
-                  <h3 className="font-bold text-yellow-400 text-sm">Premium</h3>
-                  <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full">Coming Soon</span>
-                </div>
-                <p className="text-xs text-gray-300 mb-2">
-                  Exciting premium features are on the way!
-                </p>
-                <div className="text-xs text-yellow-300/80">
-                  ✨ Video Chat<br/>
-                  ✨ Voice Calls<br/>
-                  ✨ Priority Matching<br/>
-                  ✨ Unlimited Matches
-                </div>
-              </div>
-            </div>
-
             {/* User Arc Section */}
             <div className="p-3 border-t border-gray-800/50">
               <UserArc compact={true} />
@@ -636,13 +594,6 @@ export default function MainLayout({ user, setUser, children }) {
 
       {/* Desktop Sidebar */}
       <div className="hidden md:flex w-64 bg-gradient-to-b from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f1419]/95 backdrop-blur-sm border-r border-gray-800/50 flex-col flex-shrink-0">
-        {/* Logo */}
-        <div className="p-4 border-b border-gray-800/50">
-          <h1 className="text-xl font-bold text-white">
-            otakucafe<span className="text-sm text-gray-400">.fun</span>
-          </h1>
-        </div>
-
         {/* Navigation Tabs */}
         <div className="p-3 border-b border-gray-800/50">
           <div className="flex gap-2">
@@ -792,26 +743,6 @@ export default function MainLayout({ user, setUser, children }) {
           </div>
         </div>
 
-        {/* Premium Coming Soon Section */}
-        <div className="p-3 border-t border-gray-800/50">
-          <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 border border-yellow-500/20 rounded-lg p-3 mb-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Crown className="h-5 w-5 text-yellow-400" />
-              <h3 className="font-bold text-yellow-400 text-sm">Premium</h3>
-              <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full">Coming Soon</span>
-            </div>
-            <p className="text-xs text-gray-300 mb-2">
-              Exciting premium features are on the way!
-            </p>
-            <div className="text-xs text-yellow-300/80">
-              ✨ Video Chat<br/>
-              ✨ Voice Calls<br/>
-              ✨ Priority Matching<br/>
-              ✨ Unlimited Matches
-            </div>
-          </div>
-        </div>
-
         {/* User Arc Section */}
         <div className="p-3 border-t border-gray-800/50">
           <UserArc compact={true} />
@@ -852,7 +783,7 @@ export default function MainLayout({ user, setUser, children }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden flex flex-col pt-12 md:pt-0">
+      <div className="flex-1 overflow-hidden flex flex-col">
         {React.isValidElement(children)
           ? React.cloneElement(children, { 
               openSettings: () => setShowSettingsModal(true),

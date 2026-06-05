@@ -1,0 +1,44 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OtakuCafe logo">
+  <defs>
+    <linearGradient id="otkBg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <radialGradient id="otkGlow" cx="0.3" cy="0.25" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="otkSpark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fef3c7"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="otkCup" x1="170" y1="200" x2="320" y2="352" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e7f0fb"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge -->
+  <rect x="40" y="40" width="432" height="432" rx="116" fill="url(#otkBg)"/>
+  <rect x="40" y="40" width="432" height="432" rx="116" fill="url(#otkGlow)"/>
+  <rect x="41" y="41" width="430" height="430" rx="115" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="2"/>
+
+  <!-- Steam -->
+  <g stroke="url(#otkSpark)" stroke-width="9" stroke-linecap="round" fill="none">
+    <path d="M214 190 c-16 -18 16 -30 2 -50 c-10 -14 6 -24 0 -34" opacity="0.85"/>
+    <path d="M256 194 c-16 -18 16 -30 2 -54 c-12 -16 8 -26 0 -40" opacity="0.95"/>
+    <path d="M298 190 c-16 -18 16 -30 2 -50 c-10 -14 6 -24 0 -34" opacity="0.8"/>
+  </g>
+
+  <!-- Sparkle -->
+  <path d="M372 126 l10 26 26 10 -26 10 -10 26 -10 -26 -26 -10 26 -10 Z" fill="url(#otkSpark)"/>
+  <circle cx="150" cy="312" r="6" fill="url(#otkSpark)" opacity="0.85"/>
+
+  <!-- Cup -->
+  <path d="M172 214 L340 214 L322 332 C318 346 308 352 296 352 L216 352 C204 352 194 346 190 332 Z" fill="url(#otkCup)"/>
+  <rect x="158" y="202" width="196" height="26" rx="13" fill="#ffffff"/>
+  <path d="M342 240 q58 6 58 42 q0 36 -58 42" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
+  <!-- Cup inner shadow / coffee hint -->
+  <ellipse cx="256" cy="215" rx="78" ry="11" fill="#0a0e1a" opacity="0.10"/>
+</svg>

@@ -29,6 +29,9 @@ load_dotenv(ROOT_DIR / '.env')
 # Import enhanced database connection with network error handling
 from database_connection_fixed import get_database, close_database, is_database_available
 
+# Import anime catalog service (free Jikan / MyAnimeList API, no key required)
+import anime_catalog
+
 # Database will be initialized in startup event
 db = None
 
@@ -469,6 +472,10 @@ async def shutdown_event():
         logging.info("✅ Database connection closed successfully")
     except Exception as e:
         logging.error(f"❌ Error during shutdown: {e}")
+    try:
+        await anime_catalog.close_client()
+    except Exception as e:
+        logging.error(f"❌ Error closing catalog client: {e}")
 
 # Calculate compatibility score
 def normalize_interests(interests: list) -> frozenset:
@@ -537,6 +544,147 @@ def calculate_compatibility(user1: User, user2: User) -> int:
     user1_sets, user1_has_data = prepare_user_sets(user1)
     user2_sets, user2_has_data = prepare_user_sets(user2)
     return calculate_compatibility_fast(user1_sets, user2_sets, user1_has_data, user2_has_data)
+
+
+# ---------------------------------------------------------------------------
+# Watch-behaviour based matching (taste + activity level)
+# Driven by the client's watchlist: shared shows, genre affinity, and how
+# much each person has watched (so veterans meet veterans, etc.).
+# ---------------------------------------------------------------------------
+def _safe_int_set(values) -> set:
+    out = set()
+    for v in values or []:
+        try:
+            out.add(int(v))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def prepare_watch_sets(watch_profile: Optional[dict]) -> tuple:
+    """Build matching sets from a client-provided watch profile (the watchlist)."""
+    wp = watch_profile or {}
+    stats = wp.get('stats', {}) or {}
+    raw_genres = wp.get('genres', []) or []
+    genre_labels = {}
+    for g in raw_genres:
+        if g:
+            genre_labels[g.lower().strip()] = g
+    sets = {
+        'ids': _safe_int_set(wp.get('watch_ids', [])),
+        'watching': _safe_int_set(wp.get('watching_ids', [])),
+        'completed': _safe_int_set(wp.get('completed_ids', [])),
+        'genres': normalize_interests(wp.get('genres', [])),
+        'genre_labels': genre_labels,
+        'titles': {str(k): v for k, v in (wp.get('titles', {}) or {}).items()},
+        'stats': {
+            'completed': int(stats.get('completed', 0) or 0),
+            'watching': int(stats.get('watching', 0) or 0),
+            'episodes': int(stats.get('episodes', 0) or 0),
+            'total': int(stats.get('total', 0) or 0),
+        },
+    }
+    has_data = bool(sets['ids']) or bool(sets['genres'])
+    return sets, has_data
+
+
+def _activity_tier(stats: dict) -> int:
+    """Bucket a user's experience level from completed count + episodes watched."""
+    score = stats.get('completed', 0) + stats.get('episodes', 0) * 0.1
+    if score < 5:
+        return 0    # newcomer
+    if score < 25:
+        return 1    # casual
+    if score < 75:
+        return 2    # regular
+    if score < 200:
+        return 3    # enthusiast
+    return 4        # veteran
+
+
+def calculate_watch_compatibility(w1: dict, w2: dict, w1_has: bool, w2_has: bool) -> int:
+    """
+    Score two users by their actual watch behaviour:
+      - shared shows (strong), extra bonus for shows both are *currently* watching
+      - genre affinity derived from their lists
+      - similar activity level (veterans meet veterans, newcomers meet newcomers)
+    """
+    if not (w1_has and w2_has):
+        return 0
+
+    score = 0
+    shared_all = w1['ids'] & w2['ids']
+    shared_watching = w1['watching'] & w2['watching']
+    shared_completed = w1['completed'] & w2['completed']
+    shared_genres = len(w1['genres'] & w2['genres'])
+
+    score += len(shared_all) * 12       # any shared show
+    score += len(shared_watching) * 10  # currently watching the same show (bonus)
+    score += len(shared_completed) * 3  # both finished it (smaller bonus)
+    score += shared_genres * 6          # taste overlap
+
+    # Activity-level closeness
+    diff = abs(_activity_tier(w1['stats']) - _activity_tier(w2['stats']))
+    if diff == 0:
+        score += 15
+    elif diff == 1:
+        score += 8
+    elif diff == 2:
+        score += 3
+
+    return score
+
+
+def shared_watch_titles(w1: dict, w2: dict, limit: int = 3) -> tuple:
+    """Return (currently-watching titles, other shared titles) for starters."""
+    def names_for(ids):
+        names = []
+        for i in ids:
+            t = w1['titles'].get(str(i)) or w2['titles'].get(str(i))
+            if t:
+                names.append(t)
+        return names[:limit]
+
+    both_watching = w1['watching'] & w2['watching']
+    watching = names_for(both_watching)
+    watched = names_for((w1['ids'] & w2['ids']) - both_watching)
+    return watching, watched
+
+
+def watch_match_summary(w1: dict, w2: dict, limit: int = 12) -> dict:
+    """Rich summary of two users' shared watch behaviour for the chat UI."""
+    def names_for(ids):
+        out = []
+        for i in ids:
+            t = w1['titles'].get(str(i)) or w2['titles'].get(str(i))
+            if t:
+                out.append(t)
+        return out[:limit]
+
+    both_watching = w1['watching'] & w2['watching']
+    both_completed = w1['completed'] & w2['completed']
+    all_shared = w1['ids'] & w2['ids']
+    other_shared = all_shared - both_watching - both_completed
+
+    shared_genres_norm = w1['genres'] & w2['genres']
+    genres = []
+    for ng in shared_genres_norm:
+        label = w1['genre_labels'].get(ng) or w2['genre_labels'].get(ng) or ng.title()
+        genres.append(label)
+
+    return {
+        'match_watching': names_for(both_watching),
+        'match_completed': names_for(both_completed),
+        'match_shared': names_for(other_shared),
+        'match_genres': sorted(genres)[:limit],
+        'match_counts': {
+            'watching': len(both_watching),
+            'completed': len(both_completed),
+            'shared': len(all_shared),
+            'other': len(other_shared),
+            'genres': len(shared_genres_norm),
+        },
+    }
 
 # Calculate shared anime universe data
 def calculate_shared_universe(user1: User, user2: User) -> Dict:
@@ -2705,6 +2853,7 @@ async def join_matching(sid, data):
     try:
         user_id = data.get('user_id')
         user_data = data.get('user_data')
+        watch_profile = data.get('watch_profile')
         
         logging.info(f"Join matching request from {user_id}, sid: {sid}")
         
@@ -2783,14 +2932,17 @@ async def join_matching(sid, data):
         
         # Declare global variables at the start
         global matching_queue
-        
+
+        # Build watch-behaviour matching sets from the client's watchlist
+        user_watch_sets, user_watch_has = prepare_watch_sets(watch_profile)
+
         # Check if there's someone in the queue
         logging.info(f"Current matching queue size: {len(matching_queue)}")
         logging.info(f"Queue contents: {[u['user_data']['name'] for u in matching_queue]}")
         
         if matching_queue:
             # Find best match with improved algorithm
-            match_result = await find_best_match(user, matching_queue)
+            match_result = await find_best_match(user, matching_queue, user_watch_sets, user_watch_has)
             logging.info(f"Match result: {match_result}")
             
             if match_result:
@@ -2846,7 +2998,23 @@ async def join_matching(sid, data):
                 # Calculate shared anime universe
                 partner_user_obj = User(**partner_data)
                 shared_universe = calculate_shared_universe(user, partner_user_obj)
-                
+
+                # Enrich with shared watch behaviour (shows both watch / have watched)
+                partner_watch_sets = best_match.get('watch_sets')
+                if user_watch_has and partner_watch_sets:
+                    summary = watch_match_summary(user_watch_sets, partner_watch_sets)
+                    shared_universe.update(summary)
+                    watch_starters = []
+                    if summary['match_watching']:
+                        watch_starters.append(f"You're both watching {summary['match_watching'][0]} — what do you think so far?")
+                    if summary['match_completed']:
+                        watch_starters.append(f"You've both finished {summary['match_completed'][0]} — favorite moment?")
+                    elif summary['match_shared']:
+                        watch_starters.append(f"You've both got {summary['match_shared'][0]} on your list — seen it yet?")
+                    if watch_starters:
+                        existing = shared_universe.get('conversation_starters') or []
+                        shared_universe['conversation_starters'] = watch_starters + existing
+
                 # Add match type info to shared universe
                 shared_universe['match_type'] = match_type
                 if match_type == 'great_match':
@@ -2896,6 +3064,8 @@ async def join_matching(sid, data):
                 'user_data': user_dict_queue,
                 'user_sets': user_sets,  # Pre-computed normalized sets
                 'has_data': has_data,     # Pre-computed data availability flags
+                'watch_sets': user_watch_sets,  # Pre-computed watch-behaviour sets
+                'watch_has': user_watch_has,
                 'joined_at': datetime.utcnow().timestamp()  # For fairness tracking
             })
             logging.info(f"Added user {user.name} to matching queue. Queue size: {len(matching_queue)}")
@@ -3198,19 +3368,15 @@ GOOD_MATCH_THRESHOLD = 30  # Score for a good interest-based match
 GREAT_MATCH_THRESHOLD = 50  # Score for a great interest-based match
 PERFECT_MATCH_THRESHOLD = 80  # Score for early exit optimization
 
-async def find_best_match(user, queue):
+async def find_best_match(user, queue, user_watch_sets=None, user_watch_has=False):
     """
     Optimized matching algorithm with:
     - Pre-computed sets for O(1) compatibility checks
+    - Watch-behaviour scoring (shared shows, genre affinity, activity level)
     - Early exit when perfect match (80%+) found
-    - Case-insensitive interest matching
     - Queue wait time fairness (FIFO for same tier)
-    
-    Priority:
-    1. Great matches (50%+ compatibility) - sorted by score, then wait time
-    2. Good matches (30%+ compatibility)
-    3. Decent matches (15%+ compatibility)
-    4. Random match if no interest overlap
+
+    Final score = interest overlap + watch-behaviour score (capped at 100).
     """
     if not queue:
         logging.debug("No users in queue for matching")
@@ -3248,9 +3414,23 @@ async def find_best_match(user, queue):
             queued_sets, queued_has_data = prepare_user_sets(queued_user_obj)
         
         # Fast compatibility calculation using pre-computed sets
-        compatibility_score = calculate_compatibility_fast(
+        interest_score = calculate_compatibility_fast(
             user_sets, queued_sets, user_has_data, queued_has_data
         )
+
+        # Watch-behaviour score (shared shows, genres, activity level)
+        watch_score = 0
+        if user_watch_has:
+            queued_watch_sets = queued_user.get('watch_sets')
+            queued_watch_has = queued_user.get('watch_has', False)
+            if queued_watch_sets is None and queued_user.get('watch_profile') is not None:
+                queued_watch_sets, queued_watch_has = prepare_watch_sets(queued_user.get('watch_profile'))
+            if queued_watch_sets is not None:
+                watch_score = calculate_watch_compatibility(
+                    user_watch_sets, queued_watch_sets, user_watch_has, queued_watch_has
+                )
+
+        compatibility_score = min(interest_score + watch_score, 100)
         
         # Build match data
         match_data = {
@@ -4091,6 +4271,455 @@ async def check_if_blocked(user_id: str, request: Request):
         "is_blocked": blocked_by_me is not None,
         "has_blocked_me": blocked_me is not None
     }
+# ============================================================================
+# ANIME CATALOG ENDPOINTS (public, powered by free Jikan / MyAnimeList API)
+# These are intentionally open (no auth) so pages are crawlable for SEO.
+# ============================================================================
+
+@api_router.get("/catalog/seasonal")
+async def catalog_seasonal(limit: int = 24):
+    """Anime airing this season."""
+    try:
+        return {"results": await anime_catalog.get_seasonal(limit=limit)}
+    except Exception as e:
+        logging.error(f"catalog_seasonal error: {e}")
+        return {"results": []}
+
+
+@api_router.get("/catalog/top")
+async def catalog_top(limit: int = 24, filter: Optional[str] = None):
+    """Top anime. Optional filter: airing, upcoming, bypopularity, favorite."""
+    try:
+        return {"results": await anime_catalog.get_top(limit=limit, filter_type=filter)}
+    except Exception as e:
+        logging.error(f"catalog_top error: {e}")
+        return {"results": []}
+
+
+@api_router.get("/catalog/search")
+async def catalog_search(q: str, limit: int = 24):
+    """Search the anime database."""
+    try:
+        return {"results": await anime_catalog.search(q, limit=limit)}
+    except Exception as e:
+        logging.error(f"catalog_search error: {e}")
+        return {"results": []}
+
+
+@api_router.get("/catalog/schedule")
+async def catalog_schedule():
+    """Weekly airing schedule grouped by day."""
+    try:
+        return {"schedule": await anime_catalog.get_schedule()}
+    except Exception as e:
+        logging.error(f"catalog_schedule error: {e}")
+        return {"schedule": {}}
+
+
+@api_router.get("/catalog/anime/{mal_id}")
+async def catalog_anime_detail(mal_id: int):
+    """Full anime details + recommendations."""
+    try:
+        anime = await anime_catalog.get_anime(mal_id)
+        if not anime:
+            raise HTTPException(status_code=404, detail="Anime not found")
+        recommendations = await anime_catalog.get_recommendations(mal_id, limit=12)
+        return {"anime": anime, "recommendations": recommendations}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"catalog_anime_detail error: {e}")
+        raise HTTPException(status_code=502, detail="Catalog temporarily unavailable")
+
+
+@api_router.get("/catalog/anime/{mal_id}/episodes")
+async def catalog_anime_episodes(mal_id: int, page: int = 1):
+    """Episode list for an anime."""
+    try:
+        return await anime_catalog.get_episodes(mal_id, page=page)
+    except Exception as e:
+        logging.error(f"catalog_anime_episodes error: {e}")
+        return {"episodes": [], "has_next_page": False}
+
+
+# ============================================================================
+# DISCUSSION ENDPOINTS (episode + series discussion threads, stored in MongoDB)
+# GET is public (crawlable). POST resolves an authenticated OR anonymous user.
+# ============================================================================
+
+class DiscussionPost(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    message: str
+    episode_number: Optional[int] = None
+    anime_title: Optional[str] = None
+    is_spoiler: bool = False
+    user_data: Optional[Dict[str, Any]] = None  # fallback for anonymous users
+
+
+def _serialize_comment(doc: Dict[str, Any]) -> Dict[str, Any]:
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.get("/discussions/{anime_id}")
+async def get_discussions(anime_id: str, episode_number: Optional[int] = None, limit: int = 100):
+    """Get discussion comments for an anime (optionally a specific episode)."""
+    if db is None:
+        return {"comments": [], "count": 0}
+    try:
+        query: Dict[str, Any] = {"anime_id": str(anime_id)}
+        if episode_number is not None:
+            query["episode_number"] = episode_number
+        else:
+            query["episode_number"] = None  # series-level discussion only
+
+        comments = await db.discussions.find(query, {"_id": 0}).sort("created_at", -1).limit(min(limit, 200)).to_list(min(limit, 200))
+        return {"comments": comments, "count": len(comments)}
+    except Exception as e:
+        logging.error(f"get_discussions error: {e}")
+        return {"comments": [], "count": 0}
+
+
+@api_router.post("/discussions/{anime_id}")
+async def post_discussion(anime_id: str, payload: DiscussionPost, request: Request):
+    """Post a discussion comment. Works for both logged-in and anonymous users."""
+    message = (payload.message or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message too long (max 2000 chars)")
+
+    # Resolve the author: authenticated session first, then anonymous fallback
+    user = await get_current_user(request)
+    if user:
+        author = {"id": user.id, "name": user.name, "picture": user.picture}
+    elif payload.user_data and payload.user_data.get("id"):
+        author = {
+            "id": str(payload.user_data.get("id")),
+            "name": payload.user_data.get("name", "Anonymous Otaku"),
+            "picture": payload.user_data.get("picture"),
+        }
+    else:
+        raise HTTPException(status_code=401, detail="Authentication required to post")
+
+    if db is None:
+        raise HTTPException(status_code=503, detail="Discussions are temporarily unavailable")
+
+    comment = {
+        "id": str(uuid.uuid4()),
+        "anime_id": str(anime_id),
+        "anime_title": payload.anime_title,
+        "episode_number": payload.episode_number,
+        "user_id": author["id"],
+        "user_name": author["name"],
+        "user_picture": author["picture"],
+        "message": message,
+        "is_spoiler": bool(payload.is_spoiler),
+        "likes": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        await db.discussions.insert_one(dict(comment))
+        return _serialize_comment(comment)
+    except Exception as e:
+        logging.error(f"post_discussion error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to post comment")
+
+
+@api_router.post("/discussions/{anime_id}/like/{comment_id}")
+async def like_discussion(anime_id: str, comment_id: str, request: Request, payload: Optional[Dict[str, Any]] = None):
+    """Toggle a like on a discussion comment."""
+    if db is None:
+        raise HTTPException(status_code=503, detail="Discussions are temporarily unavailable")
+
+    user = await get_current_user(request)
+    user_id = user.id if user else (payload or {}).get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    comment = await db.discussions.find_one({"id": comment_id}, {"_id": 0})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    likes = set(comment.get("likes", []))
+    if user_id in likes:
+        likes.discard(user_id)
+        liked = False
+    else:
+        likes.add(user_id)
+        liked = True
+
+    await db.discussions.update_one({"id": comment_id}, {"$set": {"likes": list(likes)}})
+    return {"liked": liked, "count": len(likes)}
+
+
+@api_router.get("/discussions/{anime_id}/stats")
+async def discussion_stats(anime_id: str):
+    """Lightweight comment counts for an anime, used for activity badges."""
+    if db is None:
+        return {"total": 0}
+    try:
+        total = await db.discussions.count_documents({"anime_id": str(anime_id)})
+        return {"total": total}
+    except Exception as e:
+        logging.error(f"discussion_stats error: {e}")
+        return {"total": 0}
+
+
+# ============================================================================
+# COMMUNITY ENDPOINTS (Reddit-style discussion hub, stored in MongoDB)
+# Posts + threaded comments + upvotes. GET is public (crawlable).
+# Posting works for both authenticated and anonymous users.
+# ============================================================================
+
+COMMUNITY_CATEGORIES = [
+    "Discussion", "Recommendation", "News", "Question",
+    "Theory", "Fan Art", "Meme", "Review",
+]
+
+
+async def _resolve_author(request: Request, user_data: Optional[Dict[str, Any]]):
+    """Resolve the acting user from session cookie, else anonymous user_data."""
+    user = await get_current_user(request)
+    if user:
+        return {"id": user.id, "name": user.name, "picture": user.picture}
+    if user_data and user_data.get("id"):
+        return {
+            "id": str(user_data.get("id")),
+            "name": user_data.get("name", "Anonymous Otaku"),
+            "picture": user_data.get("picture"),
+        }
+    return None
+
+
+class CommunityPostCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    title: str
+    body: Optional[str] = ""
+    category: str = "Discussion"
+    user_data: Optional[Dict[str, Any]] = None
+
+
+class CommunityCommentCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    message: str
+    user_data: Optional[Dict[str, Any]] = None
+
+
+class VotePayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    user_data: Optional[Dict[str, Any]] = None
+    user_id: Optional[str] = None
+
+
+def _public_post(doc: Dict[str, Any], comment_count: Optional[int] = None) -> Dict[str, Any]:
+    doc.pop("_id", None)
+    upvotes = doc.get("upvotes", [])
+    doc["upvote_count"] = len(upvotes)
+    if comment_count is not None:
+        doc["comment_count"] = comment_count
+    return doc
+
+
+@api_router.get("/community/categories")
+async def community_categories():
+    return {"categories": COMMUNITY_CATEGORIES}
+
+
+@api_router.get("/community/posts")
+async def list_community_posts(sort: str = "hot", category: Optional[str] = None, limit: int = 50):
+    """List community posts. sort = hot | new | top."""
+    if db is None:
+        return {"posts": []}
+    try:
+        query: Dict[str, Any] = {}
+        if category and category != "All":
+            query["category"] = category
+
+        posts = await db.community_posts.find(query, {"_id": 0}).sort("created_at", -1).limit(500).to_list(500)
+
+        # Comment counts (single grouped query)
+        counts: Dict[str, int] = {}
+        try:
+            pipeline = [{"$group": {"_id": "$post_id", "n": {"$sum": 1}}}]
+            async for row in db.community_comments.aggregate(pipeline):
+                counts[row["_id"]] = row["n"]
+        except Exception:
+            counts = {}
+
+        now = datetime.now(timezone.utc)
+        enriched = []
+        for p in posts:
+            cc = counts.get(p["id"], 0)
+            up = len(p.get("upvotes", []))
+            try:
+                created = datetime.fromisoformat(p["created_at"])
+                age_hours = max(0.5, (now - created).total_seconds() / 3600)
+            except Exception:
+                age_hours = 1.0
+            # Reddit-ish hot score
+            p["_hot"] = (up + cc * 0.5 + 1) / (age_hours ** 1.2)
+            p["_top"] = up
+            p["upvote_count"] = up
+            p["comment_count"] = cc
+            enriched.append(p)
+
+        if sort == "new":
+            enriched.sort(key=lambda x: x["created_at"], reverse=True)
+        elif sort == "top":
+            enriched.sort(key=lambda x: (x["_top"], x["created_at"]), reverse=True)
+        else:  # hot
+            enriched.sort(key=lambda x: x["_hot"], reverse=True)
+
+        for p in enriched:
+            p.pop("_hot", None)
+            p.pop("_top", None)
+
+        return {"posts": enriched[:min(limit, 100)]}
+    except Exception as e:
+        logging.error(f"list_community_posts error: {e}")
+        return {"posts": []}
+
+
+@api_router.post("/community/posts")
+async def create_community_post(payload: CommunityPostCreate, request: Request):
+    title = (payload.title or "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if len(title) > 300:
+        raise HTTPException(status_code=400, detail="Title too long (max 300 chars)")
+    body = (payload.body or "").strip()
+    if len(body) > 10000:
+        raise HTTPException(status_code=400, detail="Body too long")
+
+    author = await _resolve_author(request, payload.user_data)
+    if not author:
+        raise HTTPException(status_code=401, detail="Authentication required to post")
+
+    if db is None:
+        raise HTTPException(status_code=503, detail="Community is temporarily unavailable")
+
+    category = payload.category if payload.category in COMMUNITY_CATEGORIES else "Discussion"
+    post = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "body": body,
+        "category": category,
+        "user_id": author["id"],
+        "user_name": author["name"],
+        "user_picture": author["picture"],
+        "upvotes": [author["id"]],  # author auto-upvotes
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await db.community_posts.insert_one(dict(post))
+        return _public_post(post, comment_count=0)
+    except Exception as e:
+        logging.error(f"create_community_post error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create post")
+
+
+@api_router.get("/community/posts/{post_id}")
+async def get_community_post(post_id: str):
+    if db is None:
+        raise HTTPException(status_code=503, detail="Community is temporarily unavailable")
+    post = await db.community_posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    comments = await db.community_comments.find({"post_id": post_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    for c in comments:
+        c["upvote_count"] = len(c.get("upvotes", []))
+    return {"post": _public_post(post, comment_count=len(comments)), "comments": comments}
+
+
+@api_router.post("/community/posts/{post_id}/vote")
+async def vote_community_post(post_id: str, payload: VotePayload, request: Request):
+    if db is None:
+        raise HTTPException(status_code=503, detail="Community is temporarily unavailable")
+    author = await _resolve_author(request, payload.user_data)
+    user_id = author["id"] if author else payload.user_id
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    post = await db.community_posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    upvotes = set(post.get("upvotes", []))
+    if user_id in upvotes:
+        upvotes.discard(user_id)
+        voted = False
+    else:
+        upvotes.add(user_id)
+        voted = True
+    await db.community_posts.update_one({"id": post_id}, {"$set": {"upvotes": list(upvotes)}})
+    return {"voted": voted, "count": len(upvotes)}
+
+
+@api_router.post("/community/posts/{post_id}/comments")
+async def add_community_comment(post_id: str, payload: CommunityCommentCreate, request: Request):
+    message = (payload.message or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+    if len(message) > 5000:
+        raise HTTPException(status_code=400, detail="Comment too long")
+
+    author = await _resolve_author(request, payload.user_data)
+    if not author:
+        raise HTTPException(status_code=401, detail="Authentication required to comment")
+
+    if db is None:
+        raise HTTPException(status_code=503, detail="Community is temporarily unavailable")
+
+    post = await db.community_posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    comment = {
+        "id": str(uuid.uuid4()),
+        "post_id": post_id,
+        "user_id": author["id"],
+        "user_name": author["name"],
+        "user_picture": author["picture"],
+        "message": message,
+        "upvotes": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await db.community_comments.insert_one(dict(comment))
+        comment.pop("_id", None)
+        comment["upvote_count"] = 0
+        return comment
+    except Exception as e:
+        logging.error(f"add_community_comment error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add comment")
+
+
+@api_router.post("/community/comments/{comment_id}/vote")
+async def vote_community_comment(comment_id: str, payload: VotePayload, request: Request):
+    if db is None:
+        raise HTTPException(status_code=503, detail="Community is temporarily unavailable")
+    author = await _resolve_author(request, payload.user_data)
+    user_id = author["id"] if author else payload.user_id
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    comment = await db.community_comments.find_one({"id": comment_id}, {"_id": 0})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    upvotes = set(comment.get("upvotes", []))
+    if user_id in upvotes:
+        upvotes.discard(user_id)
+        voted = False
+    else:
+        upvotes.add(user_id)
+        voted = True
+    await db.community_comments.update_one({"id": comment_id}, {"$set": {"upvotes": list(upvotes)}})
+    return {"voted": voted, "count": len(upvotes)}
+
+
 # Include the router in the main app
 app.include_router(api_router)
 

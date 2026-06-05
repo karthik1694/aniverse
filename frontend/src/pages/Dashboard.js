@@ -6,6 +6,7 @@ import { MessageCircle, Instagram, Twitter, Menu, Users, Bell, X, Check } from '
 import { axiosInstance } from '../api/axiosInstance';
 import { toast } from 'sonner';
 import UserAvatar from '../components/UserAvatar';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Dashboard({ user, onStartChat, onManageInterests, onOpenMenu, notifications = [], clearNotification, markNotificationRead }) {
   const navigate = useNavigate();
@@ -153,18 +154,17 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
 
   return (
     <div className="fixed inset-0 md:relative md:h-full bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex flex-col overflow-auto z-[60] md:z-auto">
-      {/* Header - Mobile and Desktop */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/30">
-        <div className="flex items-center gap-3">
-          {/* Menu button - Mobile only */}
-          <button
-            onClick={onOpenMenu}
-            className="md:hidden text-gray-400 hover:text-white p-1"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="text-white font-semibold text-lg">New Chat</span>
-        </div>
+      {/* Mobile chat menu button (opens the chat sidebar) */}
+      <button
+        onClick={onOpenMenu}
+        className="md:hidden absolute top-3 left-3 z-[70] text-gray-300 hover:text-white p-1.5 bg-[#1a2332]/80 border border-white/10 rounded-lg"
+        aria-label="Open chat menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Floating quick actions: friend requests + notifications */}
+      <div className="absolute top-3 right-3 sm:right-4 z-[70] flex items-center gap-2">
         <div className="flex items-center gap-2">
           {/* Friend Requests Icon with Dropdown */}
           <div className="relative" ref={friendRequestsRef}>
@@ -290,11 +290,11 @@ export default function Dashboard({ user, onStartChat, onManageInterests, onOpen
       {/* Main Content */}
       <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 py-4 sm:py-6">
         <div className="w-full max-w-md mx-auto">
-          {/* Logo and Brand - Bigger like Chitchat.gg */}
+          {/* Logo and Brand */}
           <div className="text-center mb-5 sm:mb-8">
-            {/* Logo Icon - Larger */}
-            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full mb-3 sm:mb-4 shadow-2xl shadow-cyan-500/40 overflow-hidden">
-              <img src="/logo.png" alt="otakucafe.fun Logo" className="w-full h-full object-cover scale-150" />
+            {/* Logo Icon */}
+            <div className="flex justify-center mb-3 sm:mb-4">
+              <BrandLogo iconOnly size="xl" />
             </div>
             
             {/* Brand Name - Larger */}

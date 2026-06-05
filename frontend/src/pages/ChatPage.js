@@ -15,11 +15,45 @@ import UserAvatar from '../components/UserAvatar';
 import SearchFilters from '../components/SearchFilters';
 import EmojiPicker from '../components/EmojiPicker';
 import ReportUserModal from '../components/ReportUserModal';
+import GenderSelectionModal from '../components/GenderSelectionModal';
+import InterestsSelectionModal from '../components/InterestsSelectionModal';
 import Dashboard from './Dashboard';
+import { watchlist } from '../utils/watchlist';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function ChatPage({ user, openSettings, openMenu, notifications, clearNotification, markNotificationRead }) {
+/**
+ * "+N" overflow chip that reveals the hidden items in a popover on hover.
+ */
+function OverflowChip({ extra, hiddenItems, cls }) {
+  const [open, setOpen] = useState(false);
+  const remaining = extra - hiddenItems.length; // items beyond what we received
+  return (
+    <span
+      className="relative inline-block"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <span className="text-xs px-2 py-0.5 rounded-md border border-white/10 text-gray-300 bg-white/5 cursor-default hover:bg-white/10 transition-colors">
+        +{extra}
+      </span>
+      {open && hiddenItems.length > 0 && (
+        <span className="absolute z-[90] left-0 top-full mt-1 w-max max-w-[260px] bg-[#11151f] border border-white/10 rounded-lg shadow-2xl p-2 flex flex-wrap gap-1">
+          {hiddenItems.map((it, i) => (
+            <span key={i} className={`text-xs px-2 py-0.5 rounded-md border ${cls} max-w-[180px] truncate`} title={it}>
+              {it}
+            </span>
+          ))}
+          {remaining > 0 && (
+            <span className="text-xs px-2 py-0.5 text-gray-400">+{remaining} more</span>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export default function ChatPage({ user, setUser, openSettings, openMenu, notifications, clearNotification, markNotificationRead }) {
   const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -44,6 +78,8 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
   const [friendRequestSent, setFriendRequestSent] = useState(false); // Track if request was sent to current partner
     const [sendingFriendRequest, setSendingFriendRequest] = useState(false); // Prevent double-click
   const [showDashboard, setShowDashboard] = useState(true);
+  const [showGenderGate, setShowGenderGate] = useState(false);
+  const [showInterestsGate, setShowInterestsGate] = useState(false);
   const fileInputRef = useRef(null);
 
   // Dynamic usernames and avatars
@@ -270,13 +306,16 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
     checkExistingRequest();
   }, [partner, user]);
 
-  const handleStartMatching = () => {
+  const handleStartMatching = (matchUserArg) => {
+    // Accept an explicit user (from the gender/interests gate) but stay safe
+    // when used directly as a click handler (where the arg is an event).
+    const matchUser = matchUserArg && matchUserArg.id ? matchUserArg : user;
     console.log('Starting matching...', { 
       socket: !!socket, 
       socketConnected, 
       socket_id: socket?.id,
-      user_id: user.id,
-      user_name: user.name,
+      user_id: matchUser?.id,
+      user_name: matchUser?.name,
       filters: searchFilters
     });
     
@@ -290,27 +329,91 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
       socket.connect();
       setTimeout(() => {
         if (socket.connected) {
-          handleStartMatching();
+          handleStartMatching(matchUser);
         }
       }, 2000);
       return;
     }
 
     console.log('Emitting join_matching event with data:', {
-      user_id: user.id,
-      user_name: user.name,
+      user_id: matchUser.id,
+      user_name: matchUser.name,
       filters: searchFilters
     });
     
     socket.emit('join_matching', {
-      user_id: user.id,
-      user_data: user,
-      filters: searchFilters
+      user_id: matchUser.id,
+      user_data: matchUser,
+      filters: searchFilters,
+      watch_profile: watchlist.matchProfile()
     });
     
     toast.info('Searching for a match...');
     setMatching(true);
     setSkipCount(0); // Reset skip count when starting new search
+  };
+
+  // --- Gender + interests gate (collected here, inside the Chat flow) ---
+  const persistProfile = async (changes) => {
+    let updated = { ...user, ...changes };
+    if (user?.isAnonymous) {
+      localStorage.setItem('anonymous_user', JSON.stringify(updated));
+    } else {
+      try {
+        const res = await axiosInstance.put('profile', { ...user, ...changes });
+        updated = res.data;
+      } catch (e) {
+        console.error('Failed to persist profile, using local copy', e);
+      }
+    }
+    if (setUser) setUser(updated);
+    return updated;
+  };
+
+  const proceedToMatch = (matchUser) => {
+    setShowDashboard(false);
+    setTimeout(() => handleStartMatching(matchUser), 50);
+  };
+
+  // Entry point when the user wants to talk to strangers.
+  // Collects gender (required) + interests before matching.
+  const beginMatchFlow = () => {
+    if (!user?.gender) {
+      setShowGenderGate(true);
+      return;
+    }
+    proceedToMatch(user);
+  };
+
+  const handleGenderSelected = async (gender) => {
+    const updated = await persistProfile({ gender });
+    setShowGenderGate(false);
+    const hasInterests =
+      (updated.favorite_genres?.length || 0) + (updated.favorite_themes?.length || 0) > 0;
+    if (!hasInterests) {
+      setShowInterestsGate(true);
+    } else {
+      proceedToMatch(updated);
+    }
+  };
+
+  const handleGenderGateClose = () => {
+    setShowGenderGate(false);
+  };
+
+  const handleInterestsGateComplete = async (interests) => {
+    const updated = await persistProfile({
+      favorite_genres: interests.favorite_genres || [],
+      favorite_themes: interests.favorite_themes || [],
+    });
+    setShowInterestsGate(false);
+    proceedToMatch(updated);
+  };
+
+  const handleInterestsGateClose = () => {
+    setShowInterestsGate(false);
+    // Allow matching even if they skip choosing interests
+    proceedToMatch(user);
   };
 
   const handleCancelMatching = () => {
@@ -578,18 +681,29 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
 
   // Show dashboard first before matching
   if (showDashboard && !matching && !matched) {
-    return <Dashboard 
-      user={user} 
-      onStartChat={() => {
-        setShowDashboard(false);
-        handleStartMatching();
-      }}
-      onManageInterests={openSettings}
-      onOpenMenu={openMenu}
-      notifications={notifications}
-      clearNotification={clearNotification}
-      markNotificationRead={markNotificationRead}
-    />;
+    return (
+      <>
+        <Dashboard 
+          user={user} 
+          onStartChat={beginMatchFlow}
+          onManageInterests={openSettings}
+          onOpenMenu={openMenu}
+          notifications={notifications}
+          clearNotification={clearNotification}
+          markNotificationRead={markNotificationRead}
+        />
+        <GenderSelectionModal
+          isOpen={showGenderGate}
+          onClose={handleGenderGateClose}
+          onGenderSelect={handleGenderSelected}
+        />
+        <InterestsSelectionModal
+          isOpen={showInterestsGate}
+          onClose={handleInterestsGateClose}
+          onComplete={handleInterestsGateComplete}
+        />
+      </>
+    );
   }
 
   if (!matched) {
@@ -798,88 +912,102 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
               </div>
             )}
             
-            {/* Shared Anime Universe Section - Simplified */}
-            {sharedUniverse && (sharedUniverse.shared_anime?.length > 0 || sharedUniverse.shared_genres?.length > 0 || sharedUniverse.shared_themes?.length > 0 || compatibility > 0) && (
+            {/* Match panel — shared watch data */}
+            {sharedUniverse && (compatibility > 0 || sharedUniverse.match_watching?.length || sharedUniverse.match_completed?.length || sharedUniverse.match_shared?.length || sharedUniverse.match_genres?.length || sharedUniverse.shared_anime?.length || sharedUniverse.shared_genres?.length) && (
               <div className="bg-[#1e2936]/60 backdrop-blur-sm px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-700/50">
-                {/* Header with Compatibility Score */}
-                <div className="flex items-center justify-between mb-2 sm:mb-3 flex-wrap gap-2">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="text-base sm:text-lg">✨</span>
-                    <h3 className="text-white font-semibold text-xs sm:text-sm">Shared Anime Universe</h3>
+                {/* Header: partner + match score */}
+                <div className="flex items-center justify-between mb-2.5 gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+                      style={{ backgroundColor: partnerUser.color }}
+                    >
+                      {partnerUser.avatar}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-white font-semibold text-sm leading-tight truncate">{partner?.name || 'Your match'}</p>
+                      <p className="text-[10px] text-green-400 leading-tight">● online now</p>
+                    </div>
                   </div>
                   {compatibility > 0 && (
-                    <div className="bg-cyan-500/20 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-cyan-500/40">
-                      <span className="text-cyan-300 font-semibold text-xs sm:text-sm">{compatibility}% Match</span>
+                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 px-3 py-1 rounded-full border border-cyan-500/40 flex-shrink-0">
+                      <span className="text-sm">✨</span>
+                      <span className="text-cyan-200 font-bold text-sm">{compatibility}%</span>
+                      <span className="text-cyan-300/70 text-[10px]">match</span>
                     </div>
                   )}
                 </div>
 
-                {/* Shared Content - Horizontal Layout */}
-                <div className="flex flex-wrap gap-3 sm:gap-4 md:gap-6">
-                  {/* You both watched */}
-                  {sharedUniverse.shared_anime?.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-orange-400">🔥</span>
-                        <span className="text-orange-300 font-semibold text-xs">You both watched:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {sharedUniverse.shared_anime.slice(0, 3).map((anime, idx) => (
-                          <Badge key={idx} className="bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 text-xs px-3 py-1">
-                            {anime}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                {/* Shared watch data — what you actually have in common */}
+                {(() => {
+                  const su = sharedUniverse || {};
+                  const counts = su.match_counts || {};
+                  const groups = [
+                    {
+                      label: 'Both completed', icon: '✅',
+                      cls: 'bg-green-500/15 text-green-200 border-green-500/30',
+                      items: su.match_completed || [],
+                      total: counts.completed,
+                    },
+                    {
+                      label: 'Watching now', icon: '📺',
+                      cls: 'bg-cyan-500/15 text-cyan-200 border-cyan-500/30',
+                      items: su.match_watching || [],
+                      total: counts.watching,
+                    },
+                    {
+                      label: 'Top shared genres', icon: '🏷️',
+                      cls: 'bg-purple-500/15 text-purple-200 border-purple-500/30',
+                      items: su.match_genres || su.shared_genres || [],
+                      total: counts.genres,
+                    },
+                    {
+                      label: 'Also on both lists', icon: '🔗',
+                      cls: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
+                      items: su.match_shared || su.shared_anime || [],
+                      total: counts.other,
+                    },
+                  ].filter((g) => g.items && g.items.length);
 
-                  {/* Common genres */}
-                  {sharedUniverse.shared_genres?.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-purple-400">⚔️</span>
-                        <span className="text-purple-300 font-semibold text-xs">Common genres:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {sharedUniverse.shared_genres.slice(0, 3).map((genre, idx) => (
-                          <Badge key={idx} className="bg-purple-500/20 text-purple-200 border border-purple-500/30 text-xs px-3 py-1">
-                            {genre}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  if (!groups.length) {
+                    return (
+                      <p className="text-xs text-gray-400">
+                        No shared shows yet — say hi and find out what {partner?.name || 'they'} are watching! 👋
+                      </p>
+                    );
+                  }
 
-                  {/* Common themes */}
-                  {sharedUniverse.shared_themes?.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-pink-400">🎯</span>
-                        <span className="text-pink-300 font-semibold text-xs">Common themes:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {sharedUniverse.shared_themes.slice(0, 3).map((theme, idx) => (
-                          <Badge key={idx} className="bg-pink-500/20 text-pink-200 border border-pink-500/30 text-xs px-3 py-1">
-                            {theme}
-                          </Badge>
-                        ))}
-                      </div>
+                  const MAX = 3;
+                  return (
+                    <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+                      {groups.map((g) => {
+                        const total = typeof g.total === 'number' ? g.total : g.items.length;
+                        const extra = total - MAX;
+                        return (
+                          <div key={g.label} className="min-w-0">
+                            <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+                              {g.icon} {g.label}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {g.items.slice(0, MAX).map((it, i) => (
+                                <span
+                                  key={i}
+                                  className={`text-xs px-2 py-0.5 rounded-md border ${g.cls} max-w-[160px] truncate`}
+                                  title={it}
+                                >
+                                  {it}
+                                </span>
+                              ))}
+                              {extra > 0 && (
+                                <OverflowChip extra={extra} hiddenItems={g.items.slice(MAX)} cls={g.cls} />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-
-                {/* Partner Name */}
-                <div className="mt-3 text-center">
-                  <span className="text-gray-400 text-xs">You are now chatting with </span>
-                  <span className="text-cyan-400 font-semibold text-xs">{partner?.name || 'your match'}</span>
-                  <span className="text-gray-400 text-xs">. Say hi! 👋</span>
-                </div>
-                
-                {/* Privacy Notice */}
-                <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <span className="text-green-400">🔒</span>
-                  <span>This chat is ephemeral - messages vanish when you skip or leave</span>
-                </div>
+                  );
+                })()}
               </div>
             )}
             
@@ -896,15 +1024,26 @@ export default function ChatPage({ user, openSettings, openMenu, notifications, 
             <div className="flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 py-2 space-y-1">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-gray-400 max-w-lg px-4">
-                    <p className="text-lg sm:text-xl mb-4">👋 Start the conversation!</p>
+                  <div className="text-center max-w-md px-4">
+                    <div className="text-3xl mb-2">👋</div>
+                    <p className="text-base sm:text-lg font-semibold text-white mb-1">
+                      Say hi to {partner?.name || 'your match'}!
+                    </p>
+                    <p className="text-xs text-gray-500 mb-5 flex items-center justify-center gap-1.5">
+                      <span className="text-green-400">🔒</span> Messages vanish when you skip or leave
+                    </p>
                     {sharedUniverse?.conversation_starters?.length > 0 && (
-                      <div className="space-y-2 sm:space-y-3">
-                        <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">Try one of these conversation starters:</p>
-                        {sharedUniverse.conversation_starters.map((prompt, idx) => (
-                          <div key={idx} className="bg-[#1e2936]/60 p-3 sm:p-4 rounded-lg border border-cyan-500/20 text-left hover:border-cyan-500/40 transition-colors">
-                            <p className="text-xs sm:text-sm text-cyan-300 italic">"{prompt}"</p>
-                          </div>
+                      <div className="space-y-2">
+                        <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Break the ice</p>
+                        {sharedUniverse.conversation_starters.slice(0, 3).map((prompt, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setMessageInput(prompt)}
+                            className="w-full text-left bg-[#1e2936]/70 hover:bg-[#243044] px-3.5 py-2.5 rounded-xl border border-white/5 hover:border-cyan-500/40 transition-all text-sm text-gray-200 group flex items-start gap-2"
+                          >
+                            <span className="text-cyan-400 mt-0.5 group-hover:scale-110 transition-transform">💬</span>
+                            <span className="flex-1">{prompt}</span>
+                          </button>
                         ))}
                       </div>
                     )}
