@@ -23,31 +23,38 @@ import { watchlist } from '../utils/watchlist';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 /**
- * "+N" overflow chip that reveals the hidden items in a popover on hover.
+ * "+N" overflow chip that reveals the hidden items in a popover.
+ * Opens on hover (desktop) and on tap (mobile) — touch devices don't hover.
  */
 function OverflowChip({ extra, hiddenItems, cls }) {
   const [open, setOpen] = useState(false);
   const remaining = extra - hiddenItems.length; // items beyond what we received
+
+  const handleEnter = (e) => { if (e.pointerType !== 'touch') setOpen(true); };
+  const handleLeave = (e) => { if (e.pointerType !== 'touch') setOpen(false); };
+
   return (
-    <span
-      className="relative inline-block"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <span className="text-xs px-2 py-0.5 rounded-md border border-white/10 text-gray-300 bg-white/5 cursor-default hover:bg-white/10 transition-colors">
+    <span className="relative inline-block" onPointerEnter={handleEnter} onPointerLeave={handleLeave}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs px-2 py-0.5 rounded-md border border-white/10 text-gray-300 bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors"
+      >
         +{extra}
-      </span>
+      </button>
       {open && hiddenItems.length > 0 && (
-        <span className="absolute z-[90] left-0 top-full mt-1 w-max max-w-[260px] bg-[#11151f] border border-white/10 rounded-lg shadow-2xl p-2 flex flex-wrap gap-1">
-          {hiddenItems.map((it, i) => (
-            <span key={i} className={`text-xs px-2 py-0.5 rounded-md border ${cls} max-w-[180px] truncate`} title={it}>
-              {it}
-            </span>
-          ))}
-          {remaining > 0 && (
-            <span className="text-xs px-2 py-0.5 text-gray-400">+{remaining} more</span>
-          )}
-        </span>
+        <>
+          {/* tap-catcher so tapping elsewhere closes it on touch devices */}
+          <span className="fixed inset-0 z-[85]" onClick={() => setOpen(false)} />
+          <span className="absolute z-[90] left-0 top-full mt-1 w-max max-w-[70vw] sm:max-w-[260px] bg-[#11151f] border border-white/10 rounded-lg shadow-2xl p-2 flex flex-wrap gap-1">
+            {hiddenItems.map((it, i) => (
+              <span key={i} className={`text-xs px-2 py-0.5 rounded-md border ${cls} max-w-[180px] truncate`} title={it}>
+                {it}
+              </span>
+            ))}
+            {remaining > 0 && <span className="text-xs px-2 py-0.5 text-gray-400">+{remaining} more</span>}
+          </span>
+        </>
       )}
     </span>
   );
