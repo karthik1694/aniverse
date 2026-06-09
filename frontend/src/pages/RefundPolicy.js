@@ -1,9 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, DollarSign } from 'lucide-react';
+import useSeo from '../hooks/useSeo';
 
 export default function RefundPolicy() {
   const navigate = useNavigate();
+
+  useSeo({
+    title: 'Refund Policy',
+    description: 'OtakuCafe refund policy. OtakuCafe is a free anime tracker and community — review our policy for any optional paid features.',
+    path: '/refund',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] to-[#16213e] text-white">

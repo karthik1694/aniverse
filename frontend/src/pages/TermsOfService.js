@@ -1,9 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import useSeo from '../hooks/useSeo';
 
 export default function TermsOfService() {
   const navigate = useNavigate();
+
+  useSeo({
+    title: 'Terms of Service',
+    description: 'Read the OtakuCafe Terms of Service covering acceptable use of our free anime tracker and discussion community.',
+    path: '/terms',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] to-[#16213e] text-white">

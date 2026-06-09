@@ -1,9 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import useSeo from '../hooks/useSeo';
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
+
+  useSeo({
+    title: 'Privacy Policy',
+    description: 'Learn how OtakuCafe handles your data. We keep your anime watchlist on your device and respect your privacy — no account required.',
+    path: '/privacy',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] to-[#16213e] text-white">

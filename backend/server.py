@@ -455,6 +455,29 @@ async def flush_message_stats():
             logging.error(f"Error in flush_message_stats: {e}", exc_info=True)
 
 
+async def warm_catalog_cache():
+    """
+    Pre-fetch the most-visited catalog endpoints so the in-memory Jikan cache is
+    hot before the first real visitor arrives. This matters most right after a
+    cold start (Render free tier), where the cache starts empty and the first
+    user would otherwise wait on several sequential Jikan calls.
+
+    Runs in the background (non-blocking) and never raises — a failed warm-up
+    must never take the server down.
+    """
+    try:
+        logging.info("🔥 Warming anime catalog cache...")
+        # Sequential on purpose: anime_catalog rate-limits Jikan internally,
+        # so firing these one-by-one avoids tripping Jikan's 429s.
+        await anime_catalog.get_seasonal(limit=24)
+        await anime_catalog.get_top(limit=24)
+        await anime_catalog.get_top(limit=24, filter_type="airing")
+        await anime_catalog.get_schedule()
+        logging.info("✅ Anime catalog cache warmed")
+    except Exception as e:
+        logging.warning(f"⚠️ Catalog cache warm-up failed (non-fatal): {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     global db
@@ -487,6 +510,9 @@ async def startup_event():
         asyncio.create_task(cleanup_expired_rooms())
         # Start background task that batches message-stat DB writes
         asyncio.create_task(flush_message_stats())
+        # Pre-warm the anime catalog cache so the first visitor after a
+        # (cold) start gets instant catalog pages instead of waiting on Jikan.
+        asyncio.create_task(warm_catalog_cache())
         logging.info("✅ Application startup completed successfully")
         
     except Exception as e:
