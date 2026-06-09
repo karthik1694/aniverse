@@ -25,13 +25,38 @@ export default function SiteHeader({ user, setUser, leftSlot = null }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Lock body scroll while the sidebar is open
+  // Lock body scroll while the sidebar is open.
+  // We pin the body with position:fixed (capturing the current scroll offset and
+  // restoring it on close) instead of just `overflow:hidden`. Plain overflow
+  // hidden doesn't reliably stop the background page from moving/bouncing on
+  // mobile, which caused the page to jitter while the sidebar was open.
   useEffect(() => {
-    if (mobileOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
-    }
+    if (!mobileOpen) return;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+    return () => {
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.left = prev.left;
+      body.style.right = prev.right;
+      body.style.width = prev.width;
+      body.style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
+    };
   }, [mobileOpen]);
 
   const handleLogin = () => {
@@ -186,7 +211,7 @@ export default function SiteHeader({ user, setUser, leftSlot = null }) {
             </div>
 
             {/* Nav links */}
-            <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            <nav className="flex-1 overflow-y-auto p-3 space-y-1" style={{ overscrollBehavior: 'contain' }}>
               {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={to}
