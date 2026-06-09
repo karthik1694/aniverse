@@ -10,21 +10,68 @@ Includes an in-memory TTL cache so we respect Jikan's rate limits
 Docs: https://docs.api.jikan.moe/
 """
 
+import os
+import json
 import time
 import asyncio
 import logging
 import httpx
 from typing import Any, Dict, List, Optional
 
+# Optional persistent cache. redis-py ships an async client. If the package is
+# missing or REDIS_URL is unset, we silently fall back to the in-memory cache.
+try:
+    import redis.asyncio as aioredis
+except ImportError:  # pragma: no cover
+    aioredis = None
+
 logger = logging.getLogger(__name__)
 
 JIKAN_BASE = "https://api.jikan.moe/v4"
 
 # ---------------------------------------------------------------------------
-# Simple in-memory TTL cache
+# Two-tier TTL cache: L1 in-memory (fast, per-instance) + L2 Redis (persistent,
+# shared, survives restarts). Redis is optional — set REDIS_URL (e.g. an Upstash
+# rediss:// URL) to enable it. Without it, only the in-memory tier is used.
 # ---------------------------------------------------------------------------
 _CACHE: Dict[str, Dict[str, Any]] = {}
 _CACHE_LOCK = asyncio.Lock()
+
+# How long an item pulled from Redis is mirrored in the (faster) memory tier.
+_MEMORY_BACKFILL_TTL = 600  # seconds
+
+# ---- Redis (L2) configuration ----
+REDIS_URL = os.environ.get("REDIS_URL", "").strip()
+REDIS_KEY_PREFIX = "otaku:catalog:"
+_redis_client: Optional["aioredis.Redis"] = None
+_redis_enabled = bool(REDIS_URL) and aioredis is not None
+_redis_unavailable = False  # flips True after a failure so we stop retrying
+
+
+async def _get_redis() -> Optional["aioredis.Redis"]:
+    """Lazily connect to Redis. Returns None (and disables Redis) on any failure
+    so a cache outage can never take down catalog endpoints."""
+    global _redis_client, _redis_unavailable
+    if not _redis_enabled or _redis_unavailable:
+        return None
+    if _redis_client is None:
+        try:
+            _redis_client = aioredis.from_url(
+                REDIS_URL,
+                encoding="utf-8",
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                retry_on_timeout=True,
+            )
+            await _redis_client.ping()
+            logger.info("✅ Redis (L2) cache connected")
+        except Exception as e:
+            logger.warning(f"Redis unavailable, using in-memory cache only: {e}")
+            _redis_client = None
+            _redis_unavailable = True
+            return None
+    return _redis_client
 
 # A single shared client + a lock to gently serialize bursts of requests
 _client: Optional[httpx.AsyncClient] = None
@@ -44,13 +91,23 @@ async def _get_client() -> httpx.AsyncClient:
 
 
 async def close_client():
-    global _client
+    global _client, _redis_client
     if _client is not None:
         await _client.aclose()
         _client = None
+    if _redis_client is not None:
+        try:
+            await _redis_client.aclose()
+        except Exception:
+            pass
+        _redis_client = None
 
 
-def _cache_get(key: str) -> Optional[Any]:
+def _cache_set_memory(key: str, data: Any, ttl: int):
+    _CACHE[key] = {"data": data, "expires": time.time() + ttl}
+
+
+def _cache_get_memory(key: str) -> Optional[Any]:
     entry = _CACHE.get(key)
     if not entry:
         return None
@@ -60,8 +117,36 @@ def _cache_get(key: str) -> Optional[Any]:
     return entry["data"]
 
 
-def _cache_set(key: str, data: Any, ttl: int):
-    _CACHE[key] = {"data": data, "expires": time.time() + ttl}
+async def _cache_get(key: str) -> Optional[Any]:
+    """Look up a key in L1 (memory) then L2 (Redis). A Redis hit backfills L1."""
+    # L1: in-memory
+    mem = _cache_get_memory(key)
+    if mem is not None:
+        return mem
+
+    # L2: Redis (optional)
+    r = await _get_redis()
+    if r is not None:
+        try:
+            raw = await r.get(REDIS_KEY_PREFIX + key)
+            if raw is not None:
+                data = json.loads(raw)
+                _cache_set_memory(key, data, _MEMORY_BACKFILL_TTL)
+                return data
+        except Exception as e:
+            logger.warning(f"Redis get failed for {key}: {e}")
+    return None
+
+
+async def _cache_set(key: str, data: Any, ttl: int):
+    """Write through to both tiers."""
+    _cache_set_memory(key, data, ttl)
+    r = await _get_redis()
+    if r is not None:
+        try:
+            await r.set(REDIS_KEY_PREFIX + key, json.dumps(data), ex=ttl)
+        except Exception as e:
+            logger.warning(f"Redis set failed for {key}: {e}")
 
 
 async def _fetch(path: str, params: Optional[Dict[str, Any]] = None,
@@ -70,7 +155,7 @@ async def _fetch(path: str, params: Optional[Dict[str, Any]] = None,
     global _last_request_ts
     cache_key = f"{path}?{params}"
 
-    cached = _cache_get(cache_key)
+    cached = await _cache_get(cache_key)
     if cached is not None:
         return cached
 
@@ -96,7 +181,7 @@ async def _fetch(path: str, params: Optional[Dict[str, Any]] = None,
 
                 resp.raise_for_status()
                 data = resp.json()
-                _cache_set(cache_key, data, ttl)
+                await _cache_set(cache_key, data, ttl)
                 return data
             except httpx.HTTPStatusError as e:
                 logger.warning(f"Jikan HTTP error on {path}: {e}")

@@ -41,6 +41,24 @@ export const catalogApi = {
   },
 };
 
+// Track which anime have already been prefetched so repeated hovers don't
+// refire requests.
+const _prefetched = new Set();
+
+/**
+ * Warm the cache for an anime's detail page (fire-and-forget).
+ * Called on card hover so the backend (memory + Redis) cache is hot before the
+ * user clicks — turning a ~3s "first view" into an instant load. Failures are
+ * swallowed and allow a later retry.
+ */
+export function prefetchAnime(malId) {
+  if (!malId || _prefetched.has(malId)) return;
+  _prefetched.add(malId);
+  axiosInstance.get(`catalog/anime/${malId}`).catch(() => {
+    _prefetched.delete(malId);
+  });
+}
+
 export const discussionApi = {
   list: async (animeId, episodeNumber = null) => {
     const params = {};
