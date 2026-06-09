@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, Play, Plus, Check } from 'lucide-react';
 import { watchlist } from '../utils/watchlist';
+import { prefetchAnime } from '../api/catalog';
 import { toast } from 'sonner';
 
 /**
@@ -10,10 +11,29 @@ import { toast } from 'sonner';
 export default function AnimeCard({ anime, rank, onAdded }) {
   const navigate = useNavigate();
   const [inList, setInList] = React.useState(() => watchlist.isInList(anime.mal_id));
+  const prefetchTimer = React.useRef(null);
 
   const goToDetail = () => {
     navigate(`/anime/${anime.mal_id}/${anime.slug || ''}`);
   };
+
+  // Hover-intent prefetch: only warm the detail cache if the user lingers on a
+  // card for a moment, so sweeping the mouse across the grid doesn't spam the API.
+  const startPrefetch = () => {
+    if (prefetchTimer.current) return;
+    prefetchTimer.current = setTimeout(() => {
+      prefetchAnime(anime.mal_id);
+    }, 150);
+  };
+
+  const cancelPrefetch = () => {
+    if (prefetchTimer.current) {
+      clearTimeout(prefetchTimer.current);
+      prefetchTimer.current = null;
+    }
+  };
+
+  React.useEffect(() => () => cancelPrefetch(), []);
 
   const quickAdd = (e) => {
     e.stopPropagation();
@@ -30,6 +50,10 @@ export default function AnimeCard({ anime, rank, onAdded }) {
   return (
     <div
       onClick={goToDetail}
+      onMouseEnter={startPrefetch}
+      onMouseLeave={cancelPrefetch}
+      onFocus={startPrefetch}
+      onBlur={cancelPrefetch}
       className="group cursor-pointer flex flex-col"
       role="button"
       tabIndex={0}
