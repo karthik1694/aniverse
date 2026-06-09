@@ -13,7 +13,11 @@ export default function AnimeCard({ anime, rank, onAdded }) {
   const [inList, setInList] = React.useState(() => watchlist.isInList(anime.mal_id));
   const prefetchTimer = React.useRef(null);
 
-  const goToDetail = () => {
+  const goToDetail = (e) => {
+    // Prevent the click from also bubbling to the parent card's onClick, which
+    // would call navigate() twice and push two history entries (making the back
+    // button need two presses).
+    e?.stopPropagation?.();
     navigate(`/anime/${anime.mal_id}/${anime.slug || ''}`);
   };
 
