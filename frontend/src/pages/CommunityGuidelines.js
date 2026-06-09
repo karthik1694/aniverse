@@ -1,9 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, Heart, Shield, Users, AlertTriangle } from 'lucide-react';
+import useSeo from '../hooks/useSeo';
 
 export default function CommunityGuidelines() {
   const navigate = useNavigate();
+
+  useSeo({
+    title: 'Community Guidelines',
+    description: 'The OtakuCafe community guidelines: how we keep anime discussions friendly, spoiler-safe, and welcoming for fans worldwide.',
+    path: '/guidelines',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] to-[#16213e] text-white">

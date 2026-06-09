@@ -1,8 +1,15 @@
 import { ArrowLeft, Mail, MessageSquare, Clock, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useSeo from '../hooks/useSeo';
 
 export default function ContactUs() {
   const navigate = useNavigate();
+
+  useSeo({
+    title: 'Contact Us',
+    description: 'Get in touch with the OtakuCafe team. Questions, feedback, or need help with the anime tracker and community? We are here to help.',
+    path: '/contact',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a1f2e] to-[#0f1318] py-8 px-4">

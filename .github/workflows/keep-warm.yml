@@ -1,0 +1,52 @@
+name: Keep Backend Warm
+
+# Render's free tier spins the backend down after ~15 minutes of inactivity,
+# which causes a ~40s cold start (and wipes the in-memory anime cache) for the
+# next visitor. This workflow pings the lightweight /healthz endpoint on a
+# schedule so the instance — and its warm catalog cache — stays alive.
+#
+# NOTE: GitHub's scheduled runners are best-effort and can be delayed by several
+# minutes under load, and GitHub auto-disables schedules after 60 days of repo
+# inactivity. For rock-solid uptime, also set up a free external monitor
+# (e.g. UptimeRobot or cron-job.org) pinging the same URL every 5 minutes.
+
+on:
+  schedule:
+    # Every 10 minutes (cron is UTC). Keeps us comfortably under Render's 15-min sleep window.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend health + warm catalog cache
+        env:
+          # Override in repo Settings > Secrets and variables > Actions > Variables
+          # if the backend URL ever changes.
+          BACKEND_URL: ${{ vars.BACKEND_URL || 'https://aniverse-so99.onrender.com' }}
+        run: |
+          set -e
+          echo "Warming $BACKEND_URL ..."
+
+          # 1) Health check — wakes the instance (allow up to 60s for a cold start).
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$BACKEND_URL/healthz" || echo "000")
+          echo "healthz -> HTTP $code"
+
+          # 2) Pre-warm the most-visited catalog endpoints so the in-memory
+          #    Jikan cache is hot for real users. Failures here are non-fatal.
+          for path in "/api/catalog/seasonal?limit=24" "/api/catalog/top?limit=24" "/api/catalog/schedule"; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" --max-time 45 "$BACKEND_URL$path" || echo "000")
+            echo "warm $path -> HTTP $c"
+          done
+
+          # Only fail the job if the health check itself never came back OK.
+          if [ "$code" != "200" ] && [ "$code" != "204" ]; then
+            echo "::warning::Health check returned $code (backend may have been mid-cold-start)"
+          fi
+          echo "Done."

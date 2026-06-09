@@ -1,27 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
-import ProfileSetup from "./pages/ProfileSetup";
-import ChatPage from "./pages/ChatPage";
-import DirectChat from "./pages/DirectChat";
-import ProfilePage from "./pages/ProfilePage";
-import TermsOfService from "./pages/TermsOfService";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import CommunityGuidelines from "./pages/CommunityGuidelines";
-import RefundPolicy from "./pages/RefundPolicy";
-import ContactUs from "./pages/ContactUs";
-import DiscoverPage from "./pages/DiscoverPage";
-import AnimeDetailPage from "./pages/AnimeDetailPage";
-import EpisodeDiscussionPage from "./pages/EpisodeDiscussionPage";
-import SchedulePage from "./pages/SchedulePage";
-import WatchlistPage from "./pages/WatchlistPage";
-import CommunityPage from "./pages/CommunityPage";
-import CommunityPostPage from "./pages/CommunityPostPage";
+
+// Layout + loading UI stay in the main bundle — they're needed on every route,
+// so lazy-loading them would only add an extra round-trip with no real savings.
 import SiteLayout from "./components/SiteLayout";
 import MainLayout from "./components/MainLayout";
 import AnimeLoadingScreen from "./components/AnimeLoadingScreen";
 import { Toaster } from "./components/ui/sonner";
+
+// Code-split every page into its own chunk. The initial load only pays for the
+// landing/discover route; heavy routes (chat, profile, community, etc.) are
+// fetched on demand, which dramatically shrinks first-paint cost on mobile.
+const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const DirectChat = lazy(() => import("./pages/DirectChat"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const CommunityGuidelines = lazy(() => import("./pages/CommunityGuidelines"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const ContactUs = lazy(() => import("./pages/ContactUs"));
+const DiscoverPage = lazy(() => import("./pages/DiscoverPage"));
+const AnimeDetailPage = lazy(() => import("./pages/AnimeDetailPage"));
+const EpisodeDiscussionPage = lazy(() => import("./pages/EpisodeDiscussionPage"));
+const SchedulePage = lazy(() => import("./pages/SchedulePage"));
+const WatchlistPage = lazy(() => import("./pages/WatchlistPage"));
+const CommunityPage = lazy(() => import("./pages/CommunityPage"));
+const CommunityPostPage = lazy(() => import("./pages/CommunityPostPage"));
+
 import { axiosInstance, BACKEND_URL, API } from "./api/axiosInstance";
 import { createAnonymousSession, getAnonymousSession, clearAnonymousSession } from "./utils/anonymousAuth";
 
@@ -171,55 +179,57 @@ function AuthWrapper() {
   };
 
   return (
-    <Routes>
-      {/* Public, SEO-first content pages */}
-      <Route path="/" element={<SiteLayout user={user} setUser={setUser}><DiscoverPage user={user} /></SiteLayout>} />
-      <Route path="/discover" element={<SiteLayout user={user} setUser={setUser}><DiscoverPage user={user} /></SiteLayout>} />
-      <Route path="/schedule" element={<SiteLayout user={user} setUser={setUser}><SchedulePage /></SiteLayout>} />
-      <Route path="/watchlist" element={<SiteLayout user={user} setUser={setUser}><WatchlistPage /></SiteLayout>} />
-      <Route path="/community" element={<SiteLayout user={user} setUser={setUser}><CommunityPage user={user} setUser={setUser} /></SiteLayout>} />
-      <Route path="/community/:postId" element={<SiteLayout user={user} setUser={setUser}><CommunityPostPage user={user} setUser={setUser} /></SiteLayout>} />
-      <Route path="/anime/:malId/:slug/episode/:epNum" element={<SiteLayout user={user} setUser={setUser}><EpisodeDiscussionPage user={user} setUser={setUser} /></SiteLayout>} />
-      <Route path="/anime/:malId/:slug" element={<SiteLayout user={user} setUser={setUser}><AnimeDetailPage user={user} setUser={setUser} /></SiteLayout>} />
-      <Route path="/anime/:malId" element={<SiteLayout user={user} setUser={setUser}><AnimeDetailPage user={user} setUser={setUser} /></SiteLayout>} />
+    <Suspense fallback={<AnimeLoadingScreen />}>
+      <Routes>
+        {/* Public, SEO-first content pages */}
+        <Route path="/" element={<SiteLayout user={user} setUser={setUser}><DiscoverPage user={user} /></SiteLayout>} />
+        <Route path="/discover" element={<SiteLayout user={user} setUser={setUser}><DiscoverPage user={user} /></SiteLayout>} />
+        <Route path="/schedule" element={<SiteLayout user={user} setUser={setUser}><SchedulePage /></SiteLayout>} />
+        <Route path="/watchlist" element={<SiteLayout user={user} setUser={setUser}><WatchlistPage /></SiteLayout>} />
+        <Route path="/community" element={<SiteLayout user={user} setUser={setUser}><CommunityPage user={user} setUser={setUser} /></SiteLayout>} />
+        <Route path="/community/:postId" element={<SiteLayout user={user} setUser={setUser}><CommunityPostPage user={user} setUser={setUser} /></SiteLayout>} />
+        <Route path="/anime/:malId/:slug/episode/:epNum" element={<SiteLayout user={user} setUser={setUser}><EpisodeDiscussionPage user={user} setUser={setUser} /></SiteLayout>} />
+        <Route path="/anime/:malId/:slug" element={<SiteLayout user={user} setUser={setUser}><AnimeDetailPage user={user} setUser={setUser} /></SiteLayout>} />
+        <Route path="/anime/:malId" element={<SiteLayout user={user} setUser={setUser}><AnimeDetailPage user={user} setUser={setUser} /></SiteLayout>} />
 
-      {/* Legal / info */}
-      <Route path="/terms" element={<TermsOfService />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
-      <Route path="/guidelines" element={<CommunityGuidelines />} />
-      <Route path="/refund" element={<RefundPolicy />} />
-      <Route path="/contact" element={<ContactUs />} />
+        {/* Legal / info */}
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/guidelines" element={<CommunityGuidelines />} />
+        <Route path="/refund" element={<RefundPolicy />} />
+        <Route path="/contact" element={<ContactUs />} />
 
-      {/* Auth-protected app pages */}
-      <Route
-        path="/profile-setup"
-        element={protectedElement(<ProfileSetup user={user} setUser={setUser} />)}
-      />
-      <Route
-        path="/chat"
-        element={protectedElement(
-          <MainLayout user={user} setUser={setUser}>
-            <ChatPage user={user} setUser={setUser} />
-          </MainLayout>
-        )}
-      />
-      <Route
-        path="/direct-chat/:friendId"
-        element={protectedElement(
-          <MainLayout user={user} setUser={setUser}>
-            <DirectChat user={user} />
-          </MainLayout>
-        )}
-      />
-      <Route
-        path="/profile/:friendId"
-        element={protectedElement(
-          <MainLayout user={user} setUser={setUser}>
-            <ProfilePage user={user} />
-          </MainLayout>
-        )}
-      />
-    </Routes>
+        {/* Auth-protected app pages */}
+        <Route
+          path="/profile-setup"
+          element={protectedElement(<ProfileSetup user={user} setUser={setUser} />)}
+        />
+        <Route
+          path="/chat"
+          element={protectedElement(
+            <MainLayout user={user} setUser={setUser}>
+              <ChatPage user={user} setUser={setUser} />
+            </MainLayout>
+          )}
+        />
+        <Route
+          path="/direct-chat/:friendId"
+          element={protectedElement(
+            <MainLayout user={user} setUser={setUser}>
+              <DirectChat user={user} />
+            </MainLayout>
+          )}
+        />
+        <Route
+          path="/profile/:friendId"
+          element={protectedElement(
+            <MainLayout user={user} setUser={setUser}>
+              <ProfilePage user={user} />
+            </MainLayout>
+          )}
+        />
+      </Routes>
+    </Suspense>
   );
 }
 
