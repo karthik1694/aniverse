@@ -73,10 +73,28 @@ const webpackConfig = {
   },
 };
 
-// Only add babel plugin if visual editing is enabled
-if (config.enableVisualEdits) {
+// Build the Babel plugin list.
+// In production we strip console.log/info/debug calls (keeping warn/error) so
+// debug noise never ships to real users. This runs at transform time, which is
+// far more reliable than post-minification Terser tweaks.
+const babelPlugins = [];
+
+if (process.env.NODE_ENV === "production") {
+  babelPlugins.push([
+    "transform-remove-console",
+    { exclude: ["error", "warn"] },
+  ]);
+}
+
+// Only add the visual-edit metadata plugin if visual editing is enabled
+if (config.enableVisualEdits && babelMetadataPlugin) {
+  babelPlugins.push(babelMetadataPlugin);
+}
+
+if (babelPlugins.length > 0) {
   webpackConfig.babel = {
-    plugins: [babelMetadataPlugin],
+    ...(webpackConfig.babel || {}),
+    plugins: [...((webpackConfig.babel && webpackConfig.babel.plugins) || []), ...babelPlugins],
   };
 }
 

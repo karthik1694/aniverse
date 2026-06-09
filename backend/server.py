@@ -46,10 +46,52 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+
+# ---------------------------------------------------------------------------
+# CORS allowed origins (shared by both the HTTP API and Socket.IO)
+# ---------------------------------------------------------------------------
+def _build_allowed_origins() -> List[str]:
+    """Explicit allow-list of trusted origins.
+
+    NOTE: We intentionally do NOT use a wildcard "*". A wildcard is invalid when
+    combined with credentialed requests (cookies / Authorization headers) and is
+    a security risk. Add extra origins at runtime via the CORS_ORIGINS env var
+    (comma-separated) instead of editing code.
+    """
+    origins = [
+        "https://otakucafe.fun",            # Production (apex)
+        "https://www.otakucafe.fun",        # Production (www)
+        "https://aniverse-kkvz.vercel.app",  # Vercel production alias
+        "https://aniconnect.vercel.app",     # Legacy Vercel alias
+        "http://localhost:3000",            # Local dev
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:3002",
+        "http://127.0.0.1:3003",
+    ]
+    env_origins = os.environ.get("CORS_ORIGINS", "")
+    if env_origins:
+        origins.extend(o.strip() for o in env_origins.split(",") if o.strip())
+    # De-duplicate while preserving order
+    seen, result = set(), []
+    for o in origins:
+        if o not in seen:
+            seen.add(o)
+            result.append(o)
+    return result
+
+
+ALLOWED_ORIGINS = _build_allowed_origins()
+# Matches Vercel preview deployments, e.g. https://aniverse-git-feature-xyz.vercel.app
+ALLOWED_ORIGIN_REGEX = r"https://[a-zA-Z0-9-]+\.vercel\.app"
+
 # Socket.IO setup for real-time chat
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins='*',
+    cors_allowed_origins=ALLOWED_ORIGINS,
     cors_credentials=True,
     logger=os.getenv('SOCKET_DEBUG', 'false').lower() == 'true',
     engineio_logger=os.getenv('SOCKET_DEBUG', 'false').lower() == 'true',
@@ -4940,32 +4982,15 @@ async def vote_community_comment(comment_id: str, payload: VotePayload, request:
 # Include the router in the main app
 app.include_router(api_router)
 
-# CORS Configuration for production deployment
-allowed_origins = [
-    "https://aniverse-kkvz.vercel.app",  # Production Vercel domain
-    "https://aniconnect.vercel.app",  # Alternative Vercel domain
-    "https://*.vercel.app",  # All Vercel preview deployments
-    "http://localhost:3000",  # Local development
-    "http://127.0.0.1:3000",  # Local development alternative
-    "http://localhost:3001",  # Local development (alt port)
-    "http://localhost:3002",  # Local development (alt port)
-    "http://localhost:3003",  # Local development (alt port)
-    "http://127.0.0.1:3001",  # Local development alternative
-    "http://127.0.0.1:3002",  # Local development alternative
-    "http://127.0.0.1:3003",  # Local development alternative
-    "*",  # Allow all origins as fallback (for debugging)
-]
-
-# Add any additional origins from environment variable
-env_origins = os.environ.get('CORS_ORIGINS', '')
-if env_origins:
-    additional_origins = [origin.strip() for origin in env_origins.split(',') if origin.strip()]
-    allowed_origins.extend(additional_origins)
-
+# CORS Configuration for production deployment.
+# Origins are defined once in _build_allowed_origins() (near the top of this
+# file) and shared with the Socket.IO server. Preview deploys are matched via
+# a regex instead of an insecure "*" wildcard.
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=allowed_origins,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
